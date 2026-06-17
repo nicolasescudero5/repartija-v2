@@ -1,0 +1,1521 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Repartija 2.0">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#5C8374">
+<link rel="apple-touch-icon" href="icon-512.png">
+<link rel="icon" type="image/png" href="icon-512.png">
+<link rel="manifest" href="manifest.json">
+<title>Repartija 2.0 — Dividir gastos grupales</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#EAF0EC; --bg-grad:#E3EBE5; --surface:#FBFCFB; --surface-2:#F3F7F4;
+    --ink:#2F3B36; --ink-soft:#56655E; --muted:#8A998F;
+    --primary:#5C8374; --primary-deep:#456354; --primary-soft:#D8E6DE; --primary-tint:#EBF2EE;
+    --owe:#C07A68; --owe-soft:#F3E1DB; --credit:#5C8374; --credit-soft:#D8E6DE;
+    --line:#DDE6E0; --line-soft:#E9F0EB;
+    --shadow-soft:0 1px 2px rgba(47,59,54,.03), 0 4px 14px rgba(47,59,54,.05);
+    --radius:18px; --radius-sm:12px;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:'Outfit',sans-serif;color:var(--ink);
+    background:linear-gradient(165deg,var(--bg) 0%,var(--bg-grad) 100%);background-attachment:fixed;
+    line-height:1.5;-webkit-font-smoothing:antialiased;padding-bottom:50px;}
+  .wrap{max-width:1140px;margin:0 auto;padding:20px;}
+  header{padding:30px 4px 20px;display:flex;justify-content:space-between;align-items:center;}
+  .eyebrow{font-size:.78rem;letter-spacing:.16em;text-transform:uppercase;color:var(--primary);font-weight:600;margin:0 0 5px;}
+  h1{font-family:'Fraunces',serif;font-weight:500;font-size:2.2rem;line-height:1.02;margin:0;letter-spacing:-.01em;}
+  h1 em{font-style:italic;color:var(--primary-deep);}
+  .user-badge{display:flex;align-items:center;gap:10px;background:var(--surface);padding:8px 12px;border-radius:999px;border:1px solid var(--line);font-size:.9rem;box-shadow:var(--shadow-soft);}
+  .user-badge img{width:24px;height:24px;border-radius:50%;object-fit:cover;}
+  .user-badge .logout-btn{background:none;border:none;color:var(--owe);cursor:pointer;font-weight:600;font-size:.85rem;padding:0;margin-left:8px;}
+
+  /* Views and SPA structure */
+  .view{display:none;}
+  .view.active{display:block;}
+
+  /* Cards */
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow-soft);padding:24px 22px;margin-bottom:20px;}
+  .card-head{display:flex;align-items:baseline;gap:12px;margin-bottom:18px;}
+  .step{font-family:'Fraunces',serif;font-style:italic;font-size:1.15rem;color:var(--primary);width:30px;flex:none;}
+  .card-head h2{font-family:'Fraunces',serif;font-weight:500;font-size:1.35rem;margin:0;letter-spacing:-.01em;}
+  .card-head .sub{font-size:.85rem;color:var(--muted);margin:2px 0 0;}
+
+  /* Forms and Inputs */
+  label{display:block;font-size:.82rem;font-weight:500;color:var(--ink-soft);margin:0 0 6px;}
+  input[type=text],input[type=number],input[type=email],input[type=password],select{width:100%;font-family:inherit;font-size:1rem;color:var(--ink);
+    background:var(--surface-2);border:1.5px solid var(--line);border-radius:var(--radius-sm);padding:12px 14px;
+    transition:all .15s ease;}
+  input:focus,select:focus{outline:none;border-color:var(--primary);background:#fff;box-shadow:0 0 0 3px var(--primary-tint);}
+  .row{display:flex;gap:10px;} .row .grow{flex:1;min-width:0;}
+  
+  /* Buttons */
+  button{font-family:inherit;cursor:pointer;border:none;display:inline-flex;align-items:center;}
+  .btn{background:var(--primary);color:#fff;font-size:.95rem;font-weight:600;border-radius:var(--radius-sm);
+    padding:12px 18px;transition:background .15s ease, transform .06s ease;white-space:nowrap;justify-content:center;}
+  .btn:hover{background:var(--primary-deep);} .btn:active{transform:translateY(1px);}
+  .btn-block{width:100%;justify-content:center;}
+  .btn:disabled{background:#B6C5BC;cursor:not-allowed;}
+  .btn-soft{background:var(--primary-tint);color:var(--primary-deep);} .btn-soft:hover{background:var(--primary-soft);}
+  .btn-danger{background:var(--owe-soft);color:var(--owe);} .btn-danger:hover{background:#ecd0c7;}
+
+  /* Grid Layouts */
+  .grid{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,0.8fr);gap:20px;align-items:start;}
+  @media (max-width:880px){ .grid{grid-template-columns:1fr;} }
+
+  /* Login Styles */
+  .login-card{max-width:420px;margin:80px auto;text-align:center;}
+  .login-card h2{font-family:'Fraunces',serif;font-size:2rem;margin-bottom:8px;}
+  .sso-buttons{display:flex;flex-direction:column;gap:10px;margin:24px 0;}
+  .sso-btn{background:#fff;border:1px solid var(--line);border-radius:var(--radius-sm);padding:12px;font-weight:600;color:var(--ink-soft);justify-content:center;gap:10px;transition:all .12s;}
+  .sso-btn:hover{background:var(--surface-2);color:var(--ink);}
+  .sso-btn img{width:18px;height:18px;}
+  .divider{display:flex;align-items:center;color:var(--muted);font-size:.8rem;margin:20px 0;}
+  .divider::before,.divider::after{content:"";flex:1;height:1px;background:var(--line);margin:0 10px;}
+  .manual-form{display:grid;gap:12px;text-align:left;}
+
+  /* Groups view styles */
+  .groups-list{display:grid;grid-template-columns:repeat(auto-fill, minmax(280px, 1fr));gap:15px;margin-top:20px;}
+  .group-card{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow-soft);cursor:pointer;transition:transform .12s, border-color .12s;}
+  .group-card:hover{transform:translateY(-2px);border-color:var(--primary);}
+  .group-card h3{margin:0 0 6px;font-family:'Fraunces',serif;font-size:1.2rem;}
+  .group-card .meta{font-size:.82rem;color:var(--muted);display:flex;justify-content:space-between;}
+
+  /* Group details layout */
+  .group-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px;}
+  .group-actions{display:flex;gap:10px;}
+  .tab-nav{display:flex;gap:8px;border-bottom:1.5px solid var(--line);margin-bottom:20px;padding-bottom:1px;}
+  .tab-btn{background:none;border:none;padding:8px 16px;font-size:.95rem;font-weight:600;color:var(--muted);border-bottom:2.5px solid transparent;border-radius:0;cursor:pointer;}
+  .tab-btn.active{color:var(--primary-deep);border-bottom-color:var(--primary);}
+  .tab-content{display:none;}
+  .tab-content.active{display:block;}
+
+  /* Expenses Tab */
+  .fields{display:grid;gap:14px;margin-bottom:16px;}
+  .fields-2{grid-template-columns:1fr 1fr;}
+  .split-box{background:var(--surface-2);border:1.5px solid var(--line);border-radius:var(--radius-sm);padding:12px;}
+  .split-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+  .split-head .t{font-size:.82rem;font-weight:500;color:var(--ink-soft);}
+  .split-head button{background:transparent;color:var(--primary);font-size:.8rem;font-weight:600;padding:4px 8px;border-radius:8px;}
+  .split-head button:hover{background:var(--primary-tint);}
+  .split-grid{display:flex;flex-wrap:wrap;gap:8px;}
+  .pchk{position:relative;display:inline-flex;align-items:center;gap:7px;padding:7px 12px;border-radius:999px;font-size:.88rem;font-weight:500;
+    background:#fff;border:1.5px solid var(--line);color:var(--ink-soft);cursor:pointer;user-select:none;transition:all .12s ease;}
+  .pchk input{position:absolute;opacity:0;pointer-events:none;}
+  .pchk .dot{width:15px;height:15px;border-radius:50%;border:1.5px solid var(--muted);display:grid;place-items:center;flex:none;transition:all .12s ease;}
+  .pchk input:checked + .dot{background:var(--primary);border-color:var(--primary);}
+  .pchk input:checked + .dot::after{content:"";width:6px;height:6px;border-radius:50%;background:#fff;}
+  .pchk:has(input:checked){background:var(--primary-tint);border-color:var(--primary-soft);color:var(--primary-deep);}
+  
+  .exp-list{display:flex;flex-direction:column;gap:10px;margin-top:12px;}
+  .exp{display:flex;align-items:center;gap:14px;padding:14px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface-2);}
+  .exp .body{flex:1;min-width:0;} .exp .desc{font-weight:500;font-size:.97rem;}
+  .exp .meta{font-size:.82rem;color:var(--muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .exp .meta b{color:var(--primary-deep);font-weight:600;}
+  .exp .amt{font-weight:600;font-size:1.02rem;white-space:nowrap;}
+  .exp .currency-badge{font-size:.73rem;background:var(--primary-soft);color:var(--primary-deep);padding:2px 6px;border-radius:4px;margin-left:5px;font-weight:600;}
+  .exp .del{background:transparent;color:var(--muted);width:32px;height:32px;flex:none;border-radius:8px;display:grid;place-items:center;transition:all .12s ease;}
+  .exp .del:hover{background:var(--owe-soft);color:var(--owe);}
+  
+  .empty{text-align:center;color:var(--muted);font-size:.92rem;padding:22px 10px;border:1.5px dashed var(--line);border-radius:var(--radius-sm);background:var(--surface-2);width:100%;}
+  .load-more-btn{display:block;margin:15px auto 0;background:none;border:none;color:var(--primary);font-weight:600;cursor:pointer;}
+
+  /* Members Tab */
+  .subhead{font-size:.82rem;letter-spacing:.04em;font-weight:600;color:var(--ink-soft);margin:22px 0 10px;display:flex;align-items:center;gap:8px;}
+  .subhead:first-child{margin-top:0;}
+  .subhead .ico{color:var(--primary);display:grid;place-items:center;}
+  .hint{font-size:.82rem;color:var(--muted);margin:8px 0 0;}
+  .pair-list, .rule-list{display:flex;flex-wrap:wrap;gap:9px;margin-bottom:12px;}
+  .pair{display:inline-flex;align-items:center;gap:8px;background:var(--surface-2);border:1px solid var(--line);border-radius:999px;padding:6px 8px 6px 14px;font-size:.9rem;font-weight:500;}
+  .pair .x, .rule .x{background:transparent;color:var(--muted);width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:1rem;line-height:1;transition:all .12s;}
+  .pair .x:hover, .rule .x:hover{background:var(--owe-soft);color:var(--owe);}
+  .rule{display:inline-flex;align-items:center;gap:8px;background:var(--primary-tint);border:1px solid var(--primary-soft);color:var(--primary-deep);border-radius:999px;padding:6px 8px 6px 14px;font-size:.9rem;font-weight:500;}
+  .rule .arrow{opacity:.6;}
+  .addrow{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:15px;}
+  .addrow select{flex:1;min-width:110px;} .addrow .lbl{font-size:.85rem;color:var(--muted);flex:none;}
+
+  .chips{display:flex;flex-wrap:wrap;gap:9px;margin-top:10px;margin-bottom:15px;}
+  .chip{display:inline-flex;align-items:center;gap:8px;background:var(--primary-tint);border:1px solid var(--primary-soft);
+    color:var(--primary-deep);border-radius:999px;padding:7px 8px 7px 14px;font-size:.92rem;font-weight:500;}
+  .chip .avatar{width:22px;height:22px;border-radius:50%;flex:none;display:grid;place-items:center;color:#fff;font-size:.7rem;font-weight:600;}
+  .chip button{background:transparent;color:var(--primary);width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:1rem;line-height:1;transition:all .12s,color .12s;}
+  .chip button:hover{background:var(--owe-soft);color:var(--owe);}
+
+  .alias-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+  .alias-row .avatar{width:26px;height:26px;border-radius:50%;flex:none;display:grid;place-items:center;color:#fff;font-size:.74rem;font-weight:600;}
+  .alias-row .nm{width:80px;flex:none;font-size:.92rem;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .alias-row input{flex:1;font-size:.92rem;padding:9px 12px;}
+
+  /* Balances Tab */
+  .totals{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:22px;}
+  .stat{background:var(--primary-tint);border:1px solid var(--primary-soft);border-radius:var(--radius-sm);padding:16px 18px;}
+  .stat .k{font-size:.78rem;color:var(--primary-deep);font-weight:500;}
+  .stat .v{font-family:'Fraunces',serif;font-size:1.55rem;font-weight:500;margin-top:3px;}
+  .section-label{font-size:.78rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:600;margin:0 0 14px;}
+  .bal{margin-bottom:14px;}
+  .bal-row{display:flex;align-items:center;gap:12px;margin-bottom:9px;}
+  .bal-name{display:flex;align-items:center;gap:9px;width:150px;flex:none;font-weight:500;font-size:.92rem;}
+  .bal-name .avatar{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;color:#fff;font-size:.74rem;font-weight:600;flex:none;}
+  .bal-track{flex:1;position:relative;height:10px;}
+  .bal-mid{position:absolute;left:50%;top:-3px;bottom:-3px;width:1.5px;background:var(--line);}
+  .bal-fill{position:absolute;top:0;height:10px;border-radius:6px;}
+  .bal-amt{width:104px;flex:none;text-align:right;font-weight:600;font-size:.92rem;font-variant-numeric:tabular-nums;}
+  .pos{color:var(--credit);} .neg{color:var(--owe);} .zero{color:var(--muted);}
+  .settle{margin-top:24px;}
+  .pay{display:flex;align-items:center;gap:12px;padding:13px 16px;margin-bottom:10px;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);box-shadow:var(--shadow-soft);}
+  .pay .who{display:flex;align-items:center;gap:9px;font-weight:500;font-size:.95rem;min-width:0;}
+  .pay .avatar{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;color:#fff;font-size:.8rem;font-weight:600;flex:none;}
+  .who-txt{display:flex;flex-direction:column;line-height:1.18;min-width:0;}
+  .who-txt .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .who-txt .alias{font-size:.73rem;color:var(--muted);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .pay .arrow{color:var(--primary);flex:none;display:grid;place-items:center;}
+  .pay .sum{margin-left:auto;font-weight:600;font-size:1.05rem;color:var(--primary-deep);font-variant-numeric:tabular-nums;white-space:nowrap;padding-left:6px;}
+  .settled-note{text-align:center;padding:26px 16px;color:var(--primary-deep);background:var(--primary-tint);border:1px solid var(--primary-soft);border-radius:var(--radius-sm);font-weight:500;}
+  .settled-note .big{font-family:'Fraunces',serif;font-size:1.3rem;display:block;margin-bottom:4px;}
+  .moves-note{font-size:.86rem;color:var(--muted);text-align:center;margin:2px 0 18px;}
+
+  /* Modals */
+  .modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(47,59,54,.4);display:none;align-items:center;justify-content:center;padding:20px;z-index:100;backdrop-filter:blur(3px);}
+  .modal-overlay.active{display:flex;}
+  .modal{background:#fff;border-radius:var(--radius);max-width:480px;width:100%;padding:24px;box-shadow:0 10px 25px rgba(0,0,0,.15);border:1px solid var(--line);}
+  .modal h3{font-family:'Fraunces',serif;font-size:1.4rem;margin:0 0 10px;}
+  .modal-buttons{display:flex;justify-content:flex-end;gap:10px;margin-top:20px;}
+
+  .back-btn{background:none;border:none;cursor:pointer;color:var(--primary);font-weight:600;display:inline-flex;align-items:center;gap:6px;font-size:.95rem;padding:0;margin-bottom:15px;}
+  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(100px);background:var(--ink);color:#fff;padding:12px 24px;border-radius:999px;font-size:.9rem;font-weight:500;box-shadow:0 4px 12px rgba(0,0,0,.15);transition:transform .2s ease;z-index:200;}
+  .toast.active{transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <p class="eyebrow">Repartija v2.0</p>
+      <h1>Cuentas claras<em>.</em></h1>
+    </div>
+    <div id="authHeader"></div>
+  </header>
+
+  <!-- VISTA 1: LOGIN -->
+  <main id="loginView" class="view">
+    <div class="card login-card">
+      <h2>Iniciar Sesión</h2>
+      <p class="sub" style="color:var(--muted); font-size:.9rem;">Elegí cómo ingresar para guardar y compartir tus grupos de gastos.</p>
+      
+      <div class="sso-buttons">
+        <button class="sso-btn" id="googleLoginBtn">
+          <img src="https://lh3.googleusercontent.com/COxitqgJr1sICZnhOKCwKhCeaUCeRUXV9RwwbJLL3tD0bcDT1A9o1oJH1XfEQtyj8w" alt="Google">
+          Ingresar con Google
+        </button>
+        <button class="sso-btn" onclick="toast('Inicio de sesión de Microsoft próximamente disponible')">
+          Microsoft Account
+        </button>
+        <button class="sso-btn" onclick="toast('Inicio de sesión de Apple próximamente disponible')">
+          Apple Sign-In
+        </button>
+      </div>
+
+      <div class="divider">o ingresá manualmente</div>
+
+      <div class="manual-form">
+        <div>
+          <label for="emailInput">Correo Electrónico</label>
+          <input type="email" id="emailInput" placeholder="ejemplo@correo.com">
+        </div>
+        <div>
+          <label for="passwordInput">Contraseña</label>
+          <input type="password" id="passwordInput" placeholder="Contraseña">
+        </div>
+        <div style="display:flex; gap:10px; margin-top:8px;">
+          <button class="btn grow" id="signInEmailBtn">Entrar</button>
+          <button class="btn btn-soft grow" id="signUpEmailBtn">Registrarse</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- VISTA 2: LISTA DE GRUPOS -->
+  <main id="groupsView" class="view">
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <h2>Mis Grupos</h2>
+          <p class="sub">Tus viajes, juntadas y cuentas compartidas.</p>
+        </div>
+        <button class="btn" id="openCreateGroupBtn">Nuevo Grupo</button>
+      </div>
+      
+      <div class="groups-list" id="groupsList">
+        <p class="empty">Cargando grupos...</p>
+      </div>
+    </div>
+  </main>
+
+  <!-- VISTA 3: DETALLE DEL GRUPO -->
+  <main id="groupDetailsView" class="view">
+    <button class="back-btn" id="backToGroupsBtn">&larr; Volver a Mis Grupos</button>
+    
+    <div class="group-header">
+      <div>
+        <h2 id="groupNameText" style="font-family:'Fraunces',serif; font-size:1.80rem; margin:0;">Cargando...</h2>
+        <p class="sub" style="margin:2px 0 0; color:var(--muted); font-size:.85rem;" id="groupCodeText">Código: -</p>
+      </div>
+      <div class="group-actions">
+        <button class="btn btn-soft" id="shareGroupBtn">Compartir Grupo</button>
+        <button class="btn btn-danger" id="deleteGroupBtn" style="display:none;">Eliminar</button>
+      </div>
+    </div>
+
+    <nav class="tab-nav">
+      <button class="tab-btn active" data-tab="expensesTab">Gastos</button>
+      <button class="tab-btn" data-tab="membersTab">Participantes</button>
+      <button class="tab-btn" data-tab="balancesTab">Liquidación</button>
+    </nav>
+
+    <!-- Tab 1: Gastos -->
+    <div id="expensesTab" class="tab-content active">
+      <div class="grid">
+        <div class="col">
+          <section class="card">
+            <div class="card-head"><span class="step">i</span><div><h2>Nuevo Gasto</h2><p class="sub">Quién pagó, el monto y en qué moneda.</p></div></div>
+            <div class="fields">
+              <div>
+                <label for="expDesc">Concepto</label>
+                <input type="text" id="expDesc" placeholder="ej. Airbnb, Nafta, Cenas..." maxlength="80">
+              </div>
+              <div class="fields fields-2" style="margin:0;">
+                <div>
+                  <label for="expAmount">Monto</label>
+                  <input type="number" id="expAmount" placeholder="0" min="0" step="0.01">
+                </div>
+                <div>
+                  <label for="expCurrency">Moneda</label>
+                  <select id="expCurrency">
+                    <option value="ARS">🇦🇷 ARS</option>
+                    <option value="USD">🇺🇸 USD</option>
+                    <option value="EUR">🇪🇺 EUR</option>
+                    <option value="BRL">🇧🇷 BRL</option>
+                    <option value="CLP">🇨🇱 CLP</option>
+                    <option value="UYU">🇺🇾 UYU</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Tipo de Cambio -->
+              <div id="exchangeRateContainer" style="display:none; background:var(--primary-tint); border:1px solid var(--primary-soft); padding:10px 14px; border-radius:var(--radius-sm);">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                  <span style="font-size:.85rem; font-weight:600; color:var(--primary-deep);" id="rateLabel">Tipo de cambio a ARS:</span>
+                  <input type="number" id="expExchangeRate" value="1" min="0.00001" step="0.0001" style="width:120px; padding:6px 10px; font-size:.9rem;">
+                </div>
+                <p class="hint" style="margin:4px 0 0; font-size:.78rem;">Se obtuvo automáticamente el tipo de cambio oficial de hoy. Podés modificarlo si usás otra cotización (ej. dólar blue).</p>
+              </div>
+
+              <div class="fields fields-2" style="margin:0;">
+                <div>
+                  <label for="expPayer">Lo pagó</label>
+                  <select id="expPayer"></select>
+                </div>
+              </div>
+
+              <div>
+                <label>Se divide entre</label>
+                <div class="split-box">
+                  <div class="split-head">
+                    <span class="t" id="splitCount">Todos</span>
+                    <button type="button" id="toggleAllBtn">Ninguno</button>
+                  </div>
+                  <div class="split-grid" id="splitGrid"></div>
+                </div>
+              </div>
+            </div>
+            <button class="btn btn-block" id="addExpenseBtn">Sumar Gasto</button>
+          </section>
+        </div>
+
+        <div class="col">
+          <section class="card">
+            <div class="card-head"><span class="step">ii</span><div><h2>Historial de Gastos</h2><p class="sub">Todos los gastos del grupo.</p></div></div>
+            <div class="exp-list" id="expList">
+              <p class="empty">No hay gastos en este grupo.</p>
+            </div>
+            <button class="load-more-btn" id="loadMoreExpensesBtn" style="display:none;">Cargar más gastos</button>
+          </section>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 2: Participantes -->
+    <div id="membersTab" class="tab-content">
+      <div class="grid">
+        <div class="col">
+          <section class="card">
+            <div class="card-head"><span class="step">i</span><div><h2>Participantes</h2><p class="sub">Personas locales en este grupo.</p></div></div>
+            <div class="row">
+              <input type="text" id="personNameInput" placeholder="Nombre (ej. Sofi)" maxlength="24">
+              <button class="btn" id="addPersonBtn">Agregar</button>
+            </div>
+            <div class="chips" id="chips"></div>
+
+            <div class="subhead"><span class="ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg></span>Alias/CBU para cobrar</div>
+            <div id="aliasPanel"></div>
+          </section>
+        </div>
+
+        <div class="col">
+          <section class="card">
+            <div class="card-head"><span class="step">ii</span><div><h2>Parejas y Reglas</h2><p class="sub">Parejas y reglas puntuales.</p></div></div>
+            
+            <div class="subhead"><span class="ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></span>Parejas (pagan juntas)</div>
+            <div class="pair-list" id="pairList"></div>
+            <div class="addrow">
+              <select id="pairA"></select>
+              <span class="lbl">y</span>
+              <select id="pairB"></select>
+              <button class="btn btn-soft" id="addPairBtn">Unir</button>
+            </div>
+            
+            <div class="subhead" style="margin-top:20px;"><span class="ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></span>Reglas: quién le paga a quién</div>
+            <div class="rule-list" id="ruleList"></div>
+            <div class="addrow">
+              <select id="ruleP"></select>
+              <span class="lbl">le paga a</span>
+              <select id="ruleT"></select>
+              <button class="btn btn-soft" id="addRuleBtn">Agregar</button>
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 3: Saldos y Liquidación -->
+    <div id="balancesTab" class="tab-content">
+      <section class="card">
+        <div class="card-head"><span class="step">✓</span><div><h2>Cálculo de Saldos</h2><p class="sub" id="settlementCurrencyText">Liquidar saldos en ARS</p></div></div>
+        
+        <div class="totals" id="totals"></div>
+        
+        <p class="section-label">Balance consolidado</p>
+        <div class="bal" id="balancesList"></div>
+
+        <div class="settle">
+          <p class="section-label">Transferencias sugeridas</p>
+          <p class="moves-note" id="movesNote"></p>
+          <div id="settlementList"></div>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<!-- Modal: Nuevo Grupo -->
+<div class="modal-overlay" id="createGroupModal">
+  <div class="modal">
+    <h3>Nuevo Grupo</h3>
+    <div style="display:grid; gap:12px;">
+      <div>
+        <label for="newGroupName">Nombre del Grupo</label>
+        <input type="text" id="newGroupName" placeholder="ej. Viaje Mendoza, Juntada Asado" maxlength="50">
+      </div>
+      <div>
+        <label for="newGroupCurrency">Moneda de Liquidación</label>
+        <select id="newGroupCurrency">
+          <option value="ARS">🇦🇷 ARS</option>
+          <option value="USD">🇺🇸 USD</option>
+          <option value="EUR">🇪🇺 EUR</option>
+          <option value="BRL">🇧🇷 BRL</option>
+          <option value="CLP">🇨🇱 CLP</option>
+          <option value="UYU">🇺🇾 UYU</option>
+        </select>
+        <p class="hint">Es la moneda en la que se calcularán los balances de los saldos finales.</p>
+      </div>
+    </div>
+    <div class="modal-buttons">
+      <button class="btn btn-soft" id="closeCreateGroupBtn">Cancelar</button>
+      <button class="btn" id="submitCreateGroupBtn">Crear Grupo</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">Notificación</div>
+
+<!-- Firebase SDK Imports and SPA logic -->
+<script type="module">
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+  import { 
+    getAuth, 
+    signInWithPopup, 
+    GoogleAuthProvider, 
+    signOut, 
+    onAuthStateChanged,
+    createUserWithEmailAndPassword,
+    signInWithEmailAndPassword
+  } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
+  import { 
+    getFirestore, 
+    doc, 
+    setDoc, 
+    getDoc, 
+    collection, 
+    addDoc, 
+    updateDoc, 
+    deleteDoc,
+    query, 
+    where, 
+    orderBy, 
+    limit, 
+    getDocs, 
+    startAfter,
+    onSnapshot
+  } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+
+  import { firebaseConfig } from './firebase-config.js';
+
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+  const provider = new GoogleAuthProvider();
+
+  // Application State
+  let currentUser = null;
+  let activeGroup = null;
+  let activeGroupId = null;
+  let activeGroupListener = null;
+  let expensesListener = null;
+  
+  // Pagination State
+  let expenses = [];
+  let lastVisibleExpense = null;
+  let hasMoreExpenses = true;
+  const EXPENSES_LIMIT = 10;
+
+  // Cached Exchange Rates
+  let exchangeRatesCache = {};
+
+  // Helpers
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c][c] || c));
+  const initials = (name) => {
+    const parts = name.trim().split(/\s+/);
+    return (parts[0][0] + (parts[1] ? parts[1][0] : "")).toUpperCase();
+  };
+  
+  // Flags mapping
+  const flags = { ARS: "🇦🇷", USD: "🇺🇸", EUR: "🇪🇺", BRL: "🇧🇷", CLP: "🇨🇱", UYU: "🇺🇾" };
+  const getMoneyFormatter = (currency) => {
+    return new Intl.NumberFormat('es-AR', {
+      style: 'currency',
+      currency: currency,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+  };
+
+  function toast(msg) {
+    const t = $('toast');
+    t.textContent = msg;
+    t.classList.add('active');
+    setTimeout(() => t.classList.remove('active'), 2500);
+  }
+  window.toast = toast; // Export to global scope for inline onclicks
+
+  // Auth Status Watcher
+  onAuthStateChanged(auth, async (user) => {
+    if (user) {
+      currentUser = user;
+      renderAuthHeader();
+      
+      // Save user profile info in Firestore (default metadata)
+      const userRef = doc(db, 'users', user.uid);
+      await setDoc(userRef, {
+        uid: user.uid,
+        name: user.displayName || user.email.split('@')[0],
+        email: user.email,
+        photoURL: user.photoURL || '',
+        createdAt: new Date()
+      }, { merge: true });
+
+      // Router logic or go to groups
+      const hash = window.location.hash;
+      if (hash.startsWith('#/group/')) {
+        const gid = hash.split('#/group/')[1];
+        loadGroup(gid);
+      } else {
+        showView('groupsView');
+        loadGroups();
+      }
+    } else {
+      currentUser = null;
+      activeGroupId = null;
+      activeGroup = null;
+      renderAuthHeader();
+      showView('loginView');
+      window.location.hash = '';
+    }
+  });
+
+  // Render Auth Badge
+  function renderAuthHeader() {
+    const container = $('authHeader');
+    if (currentUser) {
+      const avatar = currentUser.photoURL 
+        ? `<img src="${currentUser.photoURL}" alt="avatar">`
+        : `<span style="background:var(--primary); color:#fff; width:24px; height:24px; border-radius:50%; display:inline-grid; place-items:center; font-size:.75rem; font-weight:600;">${initials(currentUser.displayName || currentUser.email)}</span>`;
+      container.innerHTML = `
+        <div class="user-badge">
+          ${avatar}
+          <span>${esc(currentUser.displayName || currentUser.email.split('@')[0])}</span>
+          <button class="logout-btn" id="logoutBtn">Salir</button>
+        </div>
+      `;
+      $('logoutBtn').addEventListener('click', () => signOut(auth));
+    } else {
+      container.innerHTML = '';
+    }
+  }
+
+  // Views Router helper
+  function showView(viewId) {
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    $(viewId).classList.add('active');
+  }
+
+  // Social Login handlers
+  $('googleLoginBtn').addEventListener('click', () => {
+    signInWithPopup(auth, provider).catch(err => toast('Error al conectar con Google: ' + err.message));
+  });
+
+  // Manual login / signup
+  $('signInEmailBtn').addEventListener('click', () => {
+    const email = $('emailInput').value.trim();
+    const password = $('passwordInput').value;
+    if (!email || !password) { toast('Cargá email y contraseña'); return; }
+    signInWithEmailAndPassword(auth, email, password)
+      .catch(err => toast('Error al ingresar: ' + err.message));
+  });
+
+  $('signUpEmailBtn').addEventListener('click', () => {
+    const email = $('emailInput').value.trim();
+    const password = $('passwordInput').value;
+    if (!email || !password) { toast('Cargá email y contraseña'); return; }
+    if (password.length < 6) { toast('La contraseña debe tener al menos 6 caracteres'); return; }
+    createUserWithEmailAndPassword(auth, email, password)
+      .then(() => toast('¡Registro exitoso!'))
+      .catch(err => toast('Error al registrarse: ' + err.message));
+  });
+
+  // --- GROUPS LIST SECTION ---
+  $('openCreateGroupBtn').addEventListener('click', () => $('createGroupModal').classList.add('active'));
+  $('closeCreateGroupBtn').addEventListener('click', () => $('createGroupModal').classList.remove('active'));
+
+  $('submitCreateGroupBtn').addEventListener('click', async () => {
+    const name = $('newGroupName').value.trim();
+    const currency = $('newGroupCurrency').value;
+    if (!name) { toast('Ingresá el nombre del grupo'); return; }
+    
+    try {
+      const docRef = await addDoc(collection(db, 'groups'), {
+        name: name,
+        ownerId: currentUser.uid,
+        currency: currency,
+        members: [currentUser.uid],
+        participants: {},
+        couples: [],
+        rules: { allowAllToEdit: true },
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
+      // Update with matching ID
+      await updateDoc(docRef, { id: docRef.id });
+
+      $('newGroupName').value = '';
+      $('createGroupModal').classList.remove('active');
+      toast('¡Grupo creado!');
+      loadGroup(docRef.id);
+    } catch(err) {
+      toast('Error al crear grupo: ' + err.message);
+    }
+  });
+
+  async function loadGroups() {
+    if (!currentUser) return;
+    const q = query(collection(db, 'groups'), where('members', 'array-contains', currentUser.uid));
+    
+    onSnapshot(q, (snapshot) => {
+      const container = $('groupsList');
+      if (snapshot.empty) {
+        container.innerHTML = '<p class="empty">No estás en ningún grupo todavía. ¡Creá uno nuevo o pedile el link a un amigo!</p>';
+        return;
+      }
+      
+      container.innerHTML = snapshot.docs.map(doc => {
+        const g = doc.data();
+        const pCount = Object.keys(g.participants || {}).length;
+        return `
+          <div class="group-card" data-gid="${g.id}">
+            <h3>${esc(g.name)}</h3>
+            <div class="meta">
+              <span>${pCount} participante(s)</span>
+              <span>Moneda: ${g.currency}</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      container.querySelectorAll('.group-card').forEach(card => {
+        card.addEventListener('click', () => {
+          const gid = card.getAttribute('data-gid');
+          loadGroup(gid);
+        });
+      });
+    });
+  }
+
+  // Handle invitation link if query parameter exists
+  async function checkInviteLink() {
+    const params = new URLSearchParams(window.location.search);
+    const inviteId = params.get('invite');
+    if (inviteId) {
+      // Clear URL parameter so it doesn't loop
+      const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + window.location.hash;
+      window.history.replaceState({path: newUrl}, '', newUrl);
+
+      onAuthStateChanged(auth, async (user) => {
+        if (user) {
+          try {
+            const groupRef = doc(db, 'groups', inviteId);
+            const groupSnap = await getDoc(groupRef);
+            if (groupSnap.exists()) {
+              const g = groupSnap.data();
+              if (!g.members.includes(user.uid)) {
+                const updatedMembers = [...g.members, user.uid];
+                await updateDoc(groupRef, {
+                  members: updatedMembers,
+                  updatedAt: new Date()
+                });
+                toast('¡Te uniste al grupo ' + g.name + '!');
+              }
+              loadGroup(inviteId);
+            } else {
+              toast('El link de invitación ya no es válido.');
+            }
+          } catch (err) {
+            toast('Error al unirse al grupo: ' + err.message);
+          }
+        } else {
+          toast('Por favor iniciá sesión para unirte al grupo.');
+        }
+      });
+    }
+  }
+  checkInviteLink();
+
+  // --- GROUP DETAILS VIEW ---
+  async function loadGroup(gid) {
+    if (activeGroupListener) activeGroupListener(); // Unsubscribe previous
+    if (expensesListener) expensesListener();
+
+    activeGroupId = gid;
+    window.location.hash = `/group/${gid}`;
+    showView('groupDetailsView');
+    
+    // Tab switching resetting
+    switchTab('expensesTab');
+
+    // Subscribe to group updates
+    activeGroupListener = onSnapshot(doc(db, 'groups', gid), (docSnap) => {
+      if (!docSnap.exists()) {
+        toast('El grupo no existe o fue eliminado.');
+        showView('groupsView');
+        return;
+      }
+      activeGroup = docSnap.data();
+      
+      // Update UI elements
+      $('groupNameText').textContent = activeGroup.name;
+      $('groupCodeText').textContent = `ID de Invitación: ${activeGroup.id}`;
+      $('settlementCurrencyText').textContent = `Liquidar saldos en ${activeGroup.currency} ${flags[activeGroup.currency] || ""}`;
+
+      // Admin actions
+      if (activeGroup.ownerId === currentUser.uid) {
+        $('deleteGroupBtn').style.display = 'inline-flex';
+      } else {
+        $('deleteGroupBtn').style.display = 'none';
+      }
+
+      // Populate Selects
+      renderFormParticipants();
+      renderChips();
+      renderAliasPanel();
+      renderPairsList();
+      renderRulesList();
+      
+      // Compute balances and calculations
+      computeAndRenderBalances();
+    });
+
+    // Reset pagination state and load expenses
+    expenses = [];
+    lastVisibleExpense = null;
+    hasMoreExpenses = true;
+    loadExpenses();
+  }
+
+  $('backToGroupsBtn').addEventListener('click', () => {
+    if (activeGroupListener) activeGroupListener();
+    if (expensesListener) expensesListener();
+    activeGroupId = null;
+    activeGroup = null;
+    showView('groupsView');
+    window.location.hash = '';
+  });
+
+  // Share invite link
+  $('shareGroupBtn').addEventListener('click', async () => {
+    if (!activeGroup) return;
+    const inviteUrl = `${window.location.protocol}//${window.location.host}${window.location.pathname}?invite=${activeGroup.id}`;
+    const shareData = {
+      title: `Unite a ${activeGroup.name} en Repartija`,
+      text: `Te invito a dividir los gastos en el grupo "${activeGroup.name}". Entrá al link para unirte:`,
+      url: inviteUrl
+    };
+
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+      } catch (err) {
+        if (err.name !== 'AbortError') toast('Error al compartir: ' + err.message);
+      }
+    } else {
+      // Fallback clipboard
+      navigator.clipboard.writeText(inviteUrl).then(() => {
+        toast('¡Link de invitación copiado al portapapeles!');
+      }).catch(err => {
+        toast('Error al copiar el link: ' + err.name);
+      });
+    }
+  });
+
+  // Delete group
+  $('deleteGroupBtn').addEventListener('click', async () => {
+    if (!activeGroup || activeGroup.ownerId !== currentUser.uid) return;
+    if (confirm('¿Seguro que querés eliminar permanentemente este grupo y todos sus gastos?')) {
+      try {
+        // Delete all expenses first
+        const expQuery = collection(db, 'groups', activeGroupId, 'expenses');
+        const snaps = await getDocs(expQuery);
+        const batchPromises = snaps.docs.map(d => deleteDoc(d.ref));
+        await Promise.all(batchPromises);
+
+        // Delete group
+        await deleteDoc(doc(db, 'groups', activeGroupId));
+        toast('Grupo eliminado con éxito');
+        $('backToGroupsBtn').click();
+      } catch (err) {
+        toast('Error al eliminar: ' + err.message);
+      }
+    }
+  });
+
+  // Tab switching
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const tabId = btn.getAttribute('data-tab');
+      switchTab(tabId);
+    });
+  });
+
+  function switchTab(tabId) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    
+    document.querySelector(`[data-tab="${tabId}"]`).classList.add('active');
+    $(tabId).classList.add('active');
+  }
+
+  // --- MULTI-CURRENCY LOGIC ---
+  $('expCurrency').addEventListener('change', async () => {
+    const currency = $('expCurrency').value;
+    const groupCurrency = activeGroup ? activeGroup.currency : 'ARS';
+    
+    if (currency === groupCurrency) {
+      $('exchangeRateContainer').style.display = 'none';
+      $('expExchangeRate').value = '1';
+    } else {
+      $('exchangeRateContainer').style.display = 'block';
+      $('expExchangeRate').value = 'Cargando...';
+      const rate = await fetchExchangeRate(currency, groupCurrency);
+      $('expExchangeRate').value = rate.toFixed(4);
+    }
+  });
+
+  async function fetchExchangeRate(from, to) {
+    const cacheKey = `${from}_${to}`;
+    // Cache for 1 hour to prevent API hitting limits
+    if (exchangeRatesCache[cacheKey] && (Date.now() - exchangeRatesCache[cacheKey].time < 3600000)) {
+      return exchangeRatesCache[cacheKey].rate;
+    }
+    
+    try {
+      const res = await fetch(`https://open.er-api.com/v6/latest/${from}`);
+      const data = await res.json();
+      if (data.result === 'success' && data.rates[to]) {
+        const rate = data.rates[to];
+        exchangeRatesCache[cacheKey] = { rate, time: Date.now() };
+        return rate;
+      }
+    } catch (err) {
+      console.error('Error fetching rates API:', err);
+    }
+    return 1.0; // Fallback
+  }
+
+  // --- PARTICIPANTS TAB LOGIC ---
+  $('addPersonBtn').addEventListener('click', async () => {
+    const name = $('personNameInput').value.trim();
+    if (!name || !activeGroup) return;
+
+    const parts = activeGroup.participants || {};
+    // Check if participant name already exists locally
+    if (Object.values(parts).some(p => p.name.toLowerCase() === name.toLowerCase())) {
+      toast('Ese nombre ya existe');
+      $('personNameInput').value = '';
+      return;
+    }
+
+    // Generate local ID
+    let seq = 1;
+    while (parts[String(seq)]) seq++;
+    const newId = String(seq);
+
+    parts[newId] = {
+      id: newId,
+      name: name,
+      paysTo: null,
+      alias: ""
+    };
+
+    try {
+      await updateDoc(doc(db, 'groups', activeGroupId), {
+        participants: parts,
+        updatedAt: new Date()
+      });
+      $('personNameInput').value = '';
+    } catch(err) {
+      toast('Error al agregar: ' + err.message);
+    }
+  });
+
+  async function removePerson(pid) {
+    if (!activeGroup) return;
+    
+    // Check if participant is used in any loaded expenses
+    const used = expenses.some(e => e.payer === pid || e.split.includes(pid));
+    if (used) {
+      toast('No podés quitar a un participante que tiene gastos asociados.');
+      return;
+    }
+
+    const parts = { ...activeGroup.participants };
+    delete parts[pid];
+
+    // Clean up couples
+    const couples = activeGroup.couples.filter(c => !c.includes(pid));
+
+    // Clean up specific rules
+    Object.keys(parts).forEach(k => {
+      if (parts[k].paysTo === pid) parts[k].paysTo = null;
+    });
+
+    try {
+      await updateDoc(doc(db, 'groups', activeGroupId), {
+        participants: parts,
+        couples: couples,
+        updatedAt: new Date()
+      });
+      toast('Participante quitado');
+    } catch(err) {
+      toast('Error al quitar: ' + err.message);
+    }
+  }
+
+  function renderFormParticipants() {
+    const pSelectPayer = $('expPayer');
+    const splitGrid = $('splitGrid');
+    
+    const parts = Object.values(activeGroup.participants || {});
+    
+    // Payer selector
+    const currentPayer = pSelectPayer.value;
+    pSelectPayer.innerHTML = parts.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('');
+    if (currentPayer && parts.some(p => p.id === currentPayer)) pSelectPayer.value = currentPayer;
+
+    // Split grid checklist
+    const prevChecked = Array.from(splitGrid.querySelectorAll('input:checked')).map(i => i.value);
+    const isAllInitially = prevChecked.length === 0;
+    
+    splitGrid.innerHTML = parts.map(p => {
+      const checked = isAllInitially || prevChecked.includes(p.id) ? 'checked' : '';
+      return `<label class="pchk"><input type="checkbox" value="${p.id}" ${checked}><span class="dot"></span>${esc(p.name.split(' ')[0])}</label>`;
+    }).join('');
+
+    updateSplitCount();
+  }
+
+  function updateSplitCount() {
+    const checklist = $('splitGrid').querySelectorAll('input');
+    const checked = $('splitGrid').querySelectorAll('input:checked');
+    const n = checked.length, t = checklist.length;
+    
+    $('splitCount').textContent = (n === t && t > 0) ? `Todos (${n})` : (n === 0 ? "Nadie" : `${n} de ${t}`);
+    $('toggleAllBtn').textContent = (n === t) ? "Ninguno" : "Todos";
+  }
+
+  $('toggleAllBtn').addEventListener('click', () => {
+    const checklist = Array.from($('splitGrid').querySelectorAll('input'));
+    const all = checklist.every(i => i.checked);
+    checklist.forEach(i => i.checked = !all);
+    updateSplitCount();
+  });
+
+  function renderChips() {
+    const parts = Object.values(activeGroup.participants || {});
+    if (!parts.length) {
+      chips.innerHTML = '<p class="empty">No hay nadie cargado en el grupo. Agregá al primero arriba.</p>';
+      return;
+    }
+    chips.innerHTML = parts.map(p => `
+      <span class="chip">
+        <span class="avatar" style="background:${colorFor(p.id)}">${initials(p.name)}</span>
+        ${esc(p.name)}
+        <button title="Quitar" class="remove-chip-btn" data-pid="${p.id}">&times;</button>
+      </span>
+    `).join('');
+
+    chips.querySelectorAll('.remove-chip-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const pid = btn.getAttribute('data-pid');
+        removePerson(pid);
+      });
+    });
+  }
+
+  function renderAliasPanel() {
+    // Generate list of local participant IDs who have paid in the currently loaded expenses
+    const payers = Array.from(new Set(expenses.map(e => e.payer))).filter(pid => activeGroup.participants[pid]);
+    const container = $('aliasPanel');
+    
+    if (!payers.length) {
+      container.innerHTML = '<p class="hint">Cuando cargues gastos, acá vas a poder poner el alias de transferencia de cada uno.</p>';
+      return;
+    }
+
+    container.innerHTML = payers.map(pid => {
+      const p = activeGroup.participants[pid];
+      return `
+        <div class="alias-row">
+          <span class="avatar" style="background:${colorFor(pid)}">${initials(p.name)}</span>
+          <span class="nm">${esc(p.name.split(' ')[0])}</span>
+          <input type="text" class="alias-input" data-pid="${pid}" value="${esc(p.alias || '')}" placeholder="alias / CBU / CVU">
+        </div>
+      `;
+    }).join('');
+
+    container.querySelectorAll('.alias-input').forEach(input => {
+      input.addEventListener('change', async (e) => {
+        const pid = input.getAttribute('data-pid');
+        const val = input.value.trim();
+        const parts = { ...activeGroup.participants };
+        if (parts[pid]) {
+          parts[pid].alias = val;
+          await updateDoc(doc(db, 'groups', activeGroupId), {
+            participants: parts,
+            updatedAt: new Date()
+          });
+        }
+      });
+    });
+  }
+
+  function renderPairsList() {
+    const pairA = $('pairA');
+    const pairB = $('pairB');
+    const parts = Object.values(activeGroup.participants || {});
+    
+    fillSelectPair(pairA); fillSelectPair(pairB);
+
+    $('pairList').innerHTML = activeGroup.couples.length ? activeGroup.couples.map((c, i) => `
+      <span class="pair">
+        ${esc(firstName(c[0]))} &amp; ${esc(firstName(c[1]))}
+        <button class="x rm-pair-btn" data-index="${i}">&times;</button>
+      </span>
+    `).join('') : '<p class="hint">Sin parejas: cada uno paga por su cuenta.</p>';
+
+    $('pairList').querySelectorAll('.rm-pair-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const idx = parseInt(btn.getAttribute('data-index'));
+        const couples = [...activeGroup.couples];
+        couples.splice(idx, 1);
+        await updateDoc(doc(db, 'groups', activeGroupId), {
+          couples: couples,
+          updatedAt: new Date()
+        });
+      });
+    });
+  }
+
+  function fillSelectPair(sel) {
+    const parts = Object.values(activeGroup.participants || {});
+    const busyIds = activeGroup.couples.flat();
+    
+    sel.innerHTML = '<option value="">Persona...</option>' + parts
+      .filter(p => !busyIds.includes(p.id))
+      .map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('');
+  }
+
+  $('addPairBtn').addEventListener('click', async () => {
+    const a = $('pairA').value, b = $('pairB').value;
+    if (!a || !b || a === b) return;
+    
+    const couples = [...activeGroup.couples, [a, b]];
+    await updateDoc(doc(db, 'groups', activeGroupId), {
+      couples: couples,
+      updatedAt: new Date()
+    });
+  });
+
+  function renderRulesList() {
+    const ruleP = $('ruleP');
+    const ruleT = $('ruleT');
+    const parts = Object.values(activeGroup.participants || {});
+
+    ruleP.innerHTML = '<option value="">Persona...</option>' + parts.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('');
+    
+    const pSelected = ruleP.value;
+    ruleT.innerHTML = '<option value="">...le paga a</option>' + parts
+      .filter(p => p.id !== pSelected)
+      .map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('');
+
+    const ruledPeople = parts.filter(p => p.paysTo);
+    $('ruleList').innerHTML = ruledPeople.length ? ruledPeople.map(p => `
+      <span class="rule">
+        ${esc(firstName(p.id))} <span class="arrow">&rarr;</span> ${esc(firstName(p.paysTo))}
+        <button class="x rm-rule-btn" data-pid="${p.id}">&times;</button>
+      </span>
+    `).join('') : '<p class="hint">Sin reglas: todos pueden pagarle a cualquiera.</p>';
+
+    $('ruleList').querySelectorAll('.rm-rule-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const pid = btn.getAttribute('data-pid');
+        const parts = { ...activeGroup.participants };
+        if (parts[pid]) {
+          parts[pid].paysTo = null;
+          await updateDoc(doc(db, 'groups', activeGroupId), {
+            participants: parts,
+            updatedAt: new Date()
+          });
+        }
+      });
+    });
+  }
+
+  $('ruleP').addEventListener('change', () => {
+    const parts = Object.values(activeGroup.participants || {});
+    const pSelected = $('ruleP').value;
+    $('ruleT').innerHTML = '<option value="">...le paga a</option>' + parts
+      .filter(p => p.id !== pSelected)
+      .map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('');
+  });
+
+  $('addRuleBtn').addEventListener('click', async () => {
+    const p = $('ruleP').value, t = $('ruleT').value;
+    if (!p || !t || p === t) return;
+
+    const parts = { ...activeGroup.participants };
+    if (parts[p]) {
+      parts[p].paysTo = t;
+      await updateDoc(doc(db, 'groups', activeGroupId), {
+        participants: parts,
+        updatedAt: new Date()
+      });
+      $('ruleP').value = '';
+      $('ruleT').value = '';
+    }
+  });
+
+  // Helpers mapping indexes and colors
+  function colorFor(pid) {
+    if (!activeGroup) return '#5C8374';
+    const parts = Object.keys(activeGroup.participants || {}).sort();
+    const idx = parts.indexOf(pid);
+    const PALETTE = ["#5C8374","#C07A68","#7B9EA8","#B08968","#8A9B6E","#9C7CA5","#6B8E9E","#C0986B","#86A079","#B07C8E"];
+    return PALETTE[(idx < 0 ? 0 : idx) % PALETTE.length];
+  }
+  function firstName(pid) {
+    if (!activeGroup || !activeGroup.participants[pid]) return "?";
+    return activeGroup.participants[pid].name.split(' ')[0];
+  }
+
+  // --- EXPENSES DB LOGIC ---
+  async function loadExpenses(loadMore = false) {
+    if (!activeGroupId) return;
+
+    let q = query(
+      collection(db, 'groups', activeGroupId, 'expenses'),
+      orderBy('createdAt', 'desc'),
+      limit(EXPENSES_LIMIT)
+    );
+
+    if (loadMore && lastVisibleExpense) {
+      q = query(
+        collection(db, 'groups', activeGroupId, 'expenses'),
+        orderBy('createdAt', 'desc'),
+        startAfter(lastVisibleExpense),
+        limit(EXPENSES_LIMIT)
+      );
+    }
+
+    try {
+      const snap = await getDocs(q);
+      if (snap.empty) {
+        if (!loadMore) {
+          expenses = [];
+          renderExpenses();
+        }
+        hasMoreExpenses = false;
+        $('loadMoreExpensesBtn').style.display = 'none';
+        return;
+      }
+
+      const list = snap.docs.map(doc => doc.data());
+      lastVisibleExpense = snap.docs[snap.docs.length - 1];
+      
+      if (loadMore) {
+        expenses = [...expenses, ...list];
+      } else {
+        expenses = list;
+      }
+      
+      hasMoreExpenses = snap.docs.length === EXPENSES_LIMIT;
+      $('loadMoreExpensesBtn').style.display = hasMoreExpenses ? 'block' : 'none';
+
+      renderExpenses();
+      renderAliasPanel();
+      computeAndRenderBalances();
+    } catch(err) {
+      toast('Error al cargar gastos: ' + err.message);
+    }
+  }
+
+  $('loadMoreExpensesBtn').addEventListener('click', () => loadExpenses(true));
+
+  // Add Expense
+  $('addExpenseBtn').addEventListener('click', async () => {
+    const desc = $('expDesc').value.trim() || 'Gasto';
+    const amount = parseFloat($('expAmount').value);
+    const currency = $('expCurrency').value;
+    const rate = parseFloat($('expExchangeRate').value);
+    const payer = $('expPayer').value;
+    const split = Array.from($('splitGrid').querySelectorAll('input:checked')).map(i => i.value);
+
+    if (isNaN(amount) || amount <= 0) { toast('Ingresá un monto válido'); return; }
+    if (isNaN(rate) || rate <= 0) { toast('Ingresá un tipo de cambio válido'); return; }
+    if (!payer) { toast('Seleccioná quién pagó'); return; }
+    if (!split.length) { toast('Seleccioná al menos un participante'); return; }
+
+    const finalCents = Math.round(amount * rate * 100);
+
+    try {
+      const expenseRef = doc(collection(db, 'groups', activeGroupId, 'expenses'));
+      const newExp = {
+        id: expenseRef.id,
+        desc: desc,
+        amount: amount,
+        currency: currency,
+        exchangeRate: rate,
+        cents: finalCents,
+        payer: payer,
+        split: split,
+        createdAt: new Date(),
+        createdBy: currentUser.uid
+      };
+      await setDoc(expenseRef, newExp);
+      
+      $('expDesc').value = '';
+      $('expAmount').value = '';
+      
+      // Reset rate selector to default
+      $('expCurrency').value = activeGroup.currency;
+      $('expCurrency').dispatchEvent(new Event('change'));
+
+      toast('Gasto agregado');
+      // Reload history
+      loadGroup(activeGroupId);
+    } catch(err) {
+      toast('Error al guardar gasto: ' + err.message);
+    }
+  });
+
+  async function deleteExpense(expId) {
+    if (confirm('¿Seguro que querés borrar este gasto?')) {
+      try {
+        await deleteDoc(doc(db, 'groups', activeGroupId, 'expenses', expId));
+        toast('Gasto eliminado');
+        loadGroup(activeGroupId);
+      } catch (err) {
+        toast('Error al eliminar: ' + err.message);
+      }
+    }
+  }
+
+  function renderExpenses() {
+    const container = $('expList');
+    if (!expenses.length) {
+      container.innerHTML = '<p class="empty">No hay gastos en este grupo.</p>';
+      return;
+    }
+
+    container.innerHTML = expenses.map(e => {
+      const payerName = firstName(e.payer);
+      const splitNames = e.split.map(firstName).join(', ');
+      
+      const rateText = e.exchangeRate !== 1 
+        ? `<span class="currency-badge">${e.amount.toFixed(2)} ${e.currency} (tipo de cambio: ${e.exchangeRate})</span>`
+        : '';
+
+      const groupCurrency = activeGroup ? activeGroup.currency : 'ARS';
+      const formattedCents = getMoneyFormatter(groupCurrency).format(e.cents / 100);
+
+      return `
+        <div class="exp">
+          <div class="body">
+            <div class="desc">${esc(e.desc)} ${rateText}</div>
+            <div class="meta">Pagó <b>${esc(payerName)}</b> · entre ${esc(splitNames)}</div>
+          </div>
+          <div class="amt">${formattedCents}</div>
+          <button class="del delete-exp-btn" data-eid="${e.id}" title="Eliminar">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m5 0V4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2"/></svg>
+          </button>
+        </div>
+      `;
+    }).join('');
+
+    container.querySelectorAll('.delete-exp-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const eid = btn.getAttribute('data-eid');
+        deleteExpense(eid);
+      });
+    });
+  }
+
+  // --- SETTLEMENT COMPUTATION LOGIC ---
+  function computeAndRenderBalances() {
+    if (!activeGroup) return;
+    const parts = Object.values(activeGroup.participants || {});
+    if (parts.length < 2 || !expenses.length) {
+      $('totals').innerHTML = '';
+      $('balancesList').innerHTML = '<p class="empty">Se necesitan al menos 2 participantes y 1 gasto para calcular saldos.</p>';
+      $('settlementList').innerHTML = '<div class="settled-note"><span class="big">¡Todo saldado!</span>Cargá un gasto para comenzar.</div>';
+      $('movesNote').textContent = '';
+      return;
+    }
+
+    // Step 1: Initialize balances map
+    const bal = {};
+    parts.forEach(p => bal[p.id] = 0);
+
+    // Step 2: Accumulate expenses
+    // We compute in the group's settlement currency
+    expenses.forEach(e => {
+      // Payer gets credit
+      if (bal[e.payer] !== undefined) bal[e.payer] += e.cents;
+      
+      // Split members pay equal shares
+      const n = e.split.length;
+      if (n > 0) {
+        const share = Math.floor(e.cents / n);
+        const remainder = e.cents - share * n;
+        
+        e.split.forEach((sid, idx) => {
+          if (bal[sid] !== undefined) {
+            bal[sid] -= share + (idx < remainder ? 1 : 0);
+          }
+        });
+      }
+    });
+
+    const totalCents = expenses.reduce((a, e) => a + e.cents, 0);
+    const groupCurrency = activeGroup.currency;
+    const formattedTotal = getMoneyFormatter(groupCurrency).format(totalCents / 100);
+    
+    $('totals').innerHTML = `
+      <div class="stat"><div class="k">Total gastado</div><div class="v">${formattedTotal}</div></div>
+      <div class="stat"><div class="k">Participantes</div><div class="v">${parts.length}</div></div>
+    `;
+
+    // Step 3: Couples grouping
+    const used = {};
+    const units = [];
+    activeGroup.couples.forEach(c => {
+      if (activeGroup.participants[c[0]] && activeGroup.participants[c[1]]) {
+        units.push({
+          ids: c.slice(),
+          bal: (bal[c[0]] || 0) + (bal[c[1]] || 0)
+        });
+        used[c[0]] = used[c[1]] = true;
+      }
+    });
+    parts.forEach(p => {
+      if (!used[p.id]) {
+        units.push({
+          ids: [p.id],
+          bal: bal[p.id] || 0
+        });
+      }
+    });
+
+    // Step 4: Render balances
+    const maxAbs = Math.max(1, ...units.map(u => Math.abs(u.bal)));
+    
+    $('balancesList').innerHTML = units.slice().sort((a,b) => b.bal - a.bal).map(u => {
+      const v = u.bal, pct = Math.abs(v) / maxAbs * 50;
+      const cls = v > 0 ? 'pos' : (v < 0 ? 'neg' : 'zero');
+      const fill = v >= 0 
+        ? `<div class="bal-fill" style="left:50%; width:${pct}%; background:var(--credit-soft)"></div>`
+        : `<div class="bal-fill" style="right:50%; width:${pct}%; background:var(--owe-soft)"></div>`;
+      
+      const txt = v > 0 
+        ? '+' + getMoneyFormatter(groupCurrency).format(v / 100)
+        : (v < 0 ? '−' + getMoneyFormatter(groupCurrency).format(-v / 100) : 'a mano');
+
+      const label = u.ids.map(pid => firstName(pid)).join(' & ');
+      const avatarColor = colorFor(u.ids[0]);
+
+      return `
+        <div class="bal-row">
+          <div class="bal-name">
+            <span class="avatar" style="background:${avatarColor}">${initials(activeGroup.participants[u.ids[0]].name)}</span>
+            ${esc(label)}
+          </div>
+          <div class="bal-track">
+            <div class="bal-mid"></div>
+            ${fill}
+          </div>
+          <div class="bal-amt ${cls}">${txt}</div>
+        </div>
+      `;
+    }).join('');
+
+    // Step 5: Settle balances (Minimize transfers algorithm)
+    const creds = units.filter(u => u.bal > 0).map(u => ({ ids: u.ids, rem: u.bal }));
+    const debs = units.filter(u => u.bal < 0).map(u => ({ ids: u.ids, rem: -u.bal }));
+    const moves = [];
+
+    // Helper functions
+    const getPayerTarget = (ids) => {
+      for (let i = 0; i < ids.length; i++) {
+        const p = activeGroup.participants[ids[i]];
+        if (p && p.paysTo) return p.paysTo;
+      }
+      return null;
+    };
+    const crByMember = (pid) => creds.find(c => c.rem > 0 && c.ids.includes(pid));
+
+    // Handle explicit rules (who pays whom)
+    debs.forEach(d => {
+      const target = getPayerTarget(d.ids);
+      if (target) {
+        const c = crByMember(target);
+        if (c) {
+          const x = Math.min(d.rem, c.rem);
+          if (x > 0) {
+            moves.push({ from: d.ids, to: c.ids, cents: x });
+            d.rem -= x;
+            c.rem -= x;
+          }
+        }
+      }
+    });
+
+    // Solve remaining balances greedily
+    const remainingDebs = debs.filter(d => d.rem > 0).sort((a,b) => b.rem - a.rem);
+    remainingDebs.forEach(d => {
+      let loopLimit = 0;
+      while (d.rem > 0 && loopLimit++ < 50) {
+        const av = creds.filter(c => c.rem > 0);
+        if (!av.length) break;
+
+        // Try exact fit, otherwise largest creditor
+        const fit = av.filter(c => c.rem >= d.rem).sort((a,b) => a.rem - b.rem)[0];
+        const c = fit || av.sort((a,b) => b.rem - a.rem)[0];
+
+        const x = Math.min(d.rem, c.rem);
+        moves.push({ from: d.ids, to: c.ids, cents: x });
+        d.rem -= x;
+        c.rem -= x;
+      }
+    });
+
+    // Step 6: Render transfers list
+    const getUnitAlias = (ids) => ids.map(id => activeGroup.participants[id]?.alias?.trim() || '').filter(Boolean).join('  ·  ');
+    
+    if (!moves.length) {
+      $('settlementList').innerHTML = '<div class="settled-note"><span class="big">¡Están todos a mano!</span>No se deben nada.</div>';
+      $('movesNote').textContent = '';
+      return;
+    }
+
+    $('movesNote').textContent = `Con ${moves.length} ${moves.length === 1 ? 'transferencia' : 'transferencias'} queda todo saldado.`;
+    
+    $('settlementList').innerHTML = moves.map(m => {
+      const fromLabel = m.from.map(firstName).join(' & ');
+      const toLabel = m.to.map(firstName).join(' & ');
+      const formattedSum = getMoneyFormatter(groupCurrency).format(m.cents / 100);
+
+      const fromAlias = getUnitAlias(m.from);
+      const toAlias = getUnitAlias(m.to);
+
+      return `
+        <div class="pay">
+          <div class="who">
+            <span class="avatar" style="background:${colorFor(m.from[0])}">${initials(activeGroup.participants[m.from[0]].name)}</span>
+            <span class="who-txt">
+              <span class="nm">${esc(fromLabel)}</span>
+              ${fromAlias ? `<span class="alias">${esc(fromAlias)}</span>` : ''}
+            </span>
+          </div>
+          <span class="arrow">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          </span>
+          <div class="who">
+            <span class="avatar" style="background:${colorFor(m.to[0])}">${initials(activeGroup.participants[m.to[0]].name)}</span>
+            <span class="who-txt">
+              <span class="nm">${esc(toLabel)}</span>
+              ${toAlias ? `<span class="alias" style="color:var(--primary-deep); font-weight:600;">${esc(toAlias)}</span>` : ''}
+            </span>
+          </div>
+          <span class="sum">${formattedSum}</span>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // Register Service Worker
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js')
+        .then(reg => console.log('Service Worker registrado:', reg.scope))
+        .catch(err => console.error('Error al registrar SW:', err));
+    });
+  }
+</script>
+</body>
+</html>

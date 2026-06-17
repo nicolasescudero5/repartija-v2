@@ -1,0 +1,18 @@
+{
+  "name": "Repartija 2.0 — dividir gastos en grupo",
+  "short_name": "Repartija 2.0",
+  "description": "Calculá el reparto de gastos grupales en múltiples monedas y sincronizá con tus amigos.",
+  "start_url": "/repartija-v2/",
+  "display": "standalone",
+  "background_color": "#EAF0EC",
+  "theme_color": "#EAF0EC",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

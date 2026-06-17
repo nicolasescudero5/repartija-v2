@@ -1,0 +1,178 @@
+rules_version = '2';
+
+// ===============================================================
+// Assumed Data Model
+// ===============================================================
+//
+// Collection: users
+// Document ID: Firebase Auth UID
+// Fields:
+//   - uid: string (required) - matches Document ID
+//   - name: string (required) - display name, max 50 chars
+//   - email: string (required) - user's email address
+//   - photoURL: string (optional) - URL, max 300 chars
+//   - createdAt: timestamp (required)
+//
+// Collection: groups
+// Document ID: Auto-generated string
+// Fields:
+//   - id: string (required) - matches Document ID
+//   - name: string (required) - group name, max 50 chars
+//   - ownerId: string (required) - creator UID
+//   - currency: string (required) - settlement currency, max 3 chars
+//   - members: list (required) - list of member UIDs, max 20 members
+//   - participants: map (required) - map of participantId to participant object
+//   - couples: list (required) - list of couples (lists of 2 strings)
+//   - rules: map (required) - map of settings
+//   - createdAt: timestamp (required)
+//   - updatedAt: timestamp (required)
+//
+// Subcollection: groups/{groupId}/expenses
+// Document ID: Auto-generated string
+// Fields:
+//   - id: string (required) - matches Document ID
+//   - desc: string (required) - concept, max 80 chars
+//   - amount: number (required) - positive original amount
+//   - currency: string (required) - original currency code, max 3 chars
+//   - exchangeRate: number (required) - positive exchange rate
+//   - cents: number (required) - converted amount in cents (integer)
+//   - payer: string (required) - participantId string (e.g. "1")
+//   - split: list (required) - list of participantId strings, max 30 items
+//   - createdAt: timestamp (required)
+//   - createdBy: string (required) - UID of creator
+//
+// ===============================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isGroupMember(groupId) {
+      return isAuthenticated() && 
+        request.auth.uid in get(/databases/$(database)/documents/groups/$(groupId)).data.members;
+    }
+
+    function hasRequiredFields(data, fields) {
+      return data.keys().hasAll(fields);
+    }
+
+    function hasOnlyAllowedFields(data, fields) {
+      return data.keys().hasOnly(fields);
+    }
+
+    function isValidEmail(email) {
+      return email is string && 
+        email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function isRecent(time) {
+      return time is timestamp &&
+             time > request.time - duration.value(5, 'm') &&
+             time <= request.time;
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidUser(data) {
+      return hasRequiredFields(data, ['uid', 'name', 'email', 'createdAt']) &&
+             hasOnlyAllowedFields(data, ['uid', 'name', 'email', 'photoURL', 'createdAt']) &&
+             data.uid == request.auth.uid &&
+             data.name is string && data.name.size() > 0 && data.name.size() <= 50 &&
+             isValidEmail(data.email) &&
+             (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() <= 300)) &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidGroup(data) {
+      return hasRequiredFields(data, ['id', 'name', 'ownerId', 'currency', 'members', 'participants', 'couples', 'rules', 'createdAt', 'updatedAt']) &&
+             hasOnlyAllowedFields(data, ['id', 'name', 'ownerId', 'currency', 'members', 'participants', 'couples', 'rules', 'createdAt', 'updatedAt']) &&
+             data.id is string && data.id.size() > 0 &&
+             data.name is string && data.name.size() > 0 && data.name.size() <= 50 &&
+             data.ownerId is string && data.ownerId.size() > 0 &&
+             data.currency is string && data.currency.size() == 3 &&
+             data.members is list && data.members.size() > 0 && data.members.size() <= 20 &&
+             data.participants is map && data.participants.keys().size() <= 50 &&
+             data.couples is list && data.couples.size() <= 25 &&
+             data.rules is map &&
+             data.createdAt is timestamp &&
+             data.updatedAt is timestamp;
+    }
+
+    function isValidExpense(data) {
+      return hasRequiredFields(data, ['id', 'desc', 'amount', 'currency', 'exchangeRate', 'cents', 'payer', 'split', 'createdAt', 'createdBy']) &&
+             hasOnlyAllowedFields(data, ['id', 'desc', 'amount', 'currency', 'exchangeRate', 'cents', 'payer', 'split', 'createdAt', 'createdBy']) &&
+             data.id is string && data.id.size() > 0 &&
+             data.desc is string && data.desc.size() > 0 && data.desc.size() <= 80 &&
+             data.amount is number && data.amount > 0 &&
+             data.currency is string && data.currency.size() == 3 &&
+             data.exchangeRate is number && data.exchangeRate > 0 &&
+             data.cents is int && data.cents >= 0 &&
+             data.payer is string && data.payer.size() > 0 && data.payer.size() <= 20 &&
+             data.split is list && data.split.size() > 0 && data.split.size() <= 30 &&
+             data.createdAt is timestamp &&
+             data.createdBy is string && data.createdBy == request.auth.uid;
+    }
+
+    // ===============================================================
+    // Collection Rules
+    // ===============================================================
+
+    // Users Collection
+    match /users/{userId} {
+      allow read: if isAuthenticated(); // Allowed so members can resolve names/emails in lists
+      allow create: if isOwner(userId) && isValidUser(request.resource.data) && isRecent(request.resource.data.createdAt);
+      allow update: if isOwner(userId) && isValidUser(request.resource.data) && 
+                      request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if false; // Users cannot delete their accounts programmatically
+    }
+
+    // Groups Collection
+    match /groups/{groupId} {
+      allow read: if isAuthenticated() && request.auth.uid in resource.data.members;
+      allow create: if isAuthenticated() && 
+                      request.resource.data.ownerId == request.auth.uid &&
+                      request.auth.uid in request.resource.data.members &&
+                      isValidGroup(request.resource.data) &&
+                      isRecent(request.resource.data.createdAt);
+      allow update: if isAuthenticated() && 
+                      request.auth.uid in resource.data.members &&
+                      request.auth.uid in request.resource.data.members &&
+                      isValidGroup(request.resource.data) &&
+                      request.resource.data.ownerId == resource.data.ownerId &&
+                      request.resource.data.createdAt == resource.data.createdAt &&
+                      isRecent(request.resource.data.updatedAt);
+      allow delete: if isAuthenticated() && resource.data.ownerId == request.auth.uid;
+
+      // Expenses Subcollection
+      match /expenses/{expenseId} {
+        allow read: if isGroupMember(groupId);
+        allow create: if isGroupMember(groupId) && 
+                        isValidExpense(request.resource.data) &&
+                        isRecent(request.resource.data.createdAt);
+        allow update: if isGroupMember(groupId) && 
+                        isValidExpense(request.resource.data) &&
+                        request.resource.data.createdBy == resource.data.createdBy &&
+                        request.resource.data.createdAt == resource.data.createdAt;
+        allow delete: if isGroupMember(groupId);
+      }
+    }
+  }
+}
