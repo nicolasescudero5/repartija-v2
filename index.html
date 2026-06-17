@@ -5,13 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Repartija 2.0">
+<meta name="apple-mobile-web-app-title" content="Repartijas">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="theme-color" content="#5C8374">
 <link rel="apple-touch-icon" href="icon-512.png">
 <link rel="icon" type="image/png" href="icon-512.png">
 <link rel="manifest" href="manifest.json">
-<title>Repartija 2.0 — Dividir gastos grupales</title>
+<title>Repartijas — Dividir gastos en grupo</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -28,15 +28,23 @@
   *{box-sizing:border-box;}
   body{margin:0;font-family:'Outfit',sans-serif;color:var(--ink);
     background:linear-gradient(165deg,var(--bg) 0%,var(--bg-grad) 100%);background-attachment:fixed;
-    line-height:1.5;-webkit-font-smoothing:antialiased;padding-bottom:50px;}
+    line-height:1.5;-webkit-font-smoothing:antialiased;padding-bottom:100px;} /* Extra padding for bottom navigation */
   .wrap{max-width:1140px;margin:0 auto;padding:20px;}
-  header{padding:30px 4px 20px;display:flex;justify-content:space-between;align-items:center;}
+  header{padding:20px 4px 15px;display:flex;justify-content:space-between;align-items:center;}
   .eyebrow{font-size:.78rem;letter-spacing:.16em;text-transform:uppercase;color:var(--primary);font-weight:600;margin:0 0 5px;}
   h1{font-family:'Fraunces',serif;font-weight:500;font-size:2.2rem;line-height:1.02;margin:0;letter-spacing:-.01em;}
   h1 em{font-style:italic;color:var(--primary-deep);}
-  .user-badge{display:flex;align-items:center;gap:10px;background:var(--surface);padding:8px 12px;border-radius:999px;border:1px solid var(--line);font-size:.9rem;box-shadow:var(--shadow-soft);}
-  .user-badge img{width:24px;height:24px;border-radius:50%;object-fit:cover;}
-  .user-badge .logout-btn{background:none;border:none;color:var(--owe);cursor:pointer;font-weight:600;font-size:.85rem;padding:0;margin-left:8px;}
+  
+  /* PWA bottom navbar */
+  .bottom-nav{position:fixed;bottom:0;left:0;right:0;background:rgba(251, 252, 251, 0.85);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-top:1px solid var(--line);display:none;justify-content:space-around;padding:12px 10px calc(12px + env(safe-area-inset-bottom));z-index:90;box-shadow:0 -4px 15px rgba(47,59,54,.05);}
+  .bottom-nav.visible{display:flex;}
+  .nav-item{background:none;border:none;flex-direction:column;align-items:center;color:var(--muted);font-weight:600;font-size:.75rem;cursor:pointer;gap:4px;transition:color .15s ease;display:flex;justify-content:center;}
+  .nav-item svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:2.2;transition:transform .12s;}
+  .nav-item.active{color:var(--primary);}
+  .nav-item:active svg{transform:scale(0.9);}
+  .nav-item-center{position:relative;top:-6px;background:var(--primary);color:#fff !important;width:48px;height:48px;border-radius:50%;box-shadow:0 4px 10px rgba(92,131,116,.35);justify-content:center;align-items:center;}
+  .nav-item-center svg{width:24px;height:24px;stroke:#fff;}
+  .nav-item-center:hover{background:var(--primary-deep);}
 
   /* Views and SPA structure */
   .view{display:none;}
@@ -66,13 +74,18 @@
   .btn:disabled{background:#B6C5BC;cursor:not-allowed;}
   .btn-soft{background:var(--primary-tint);color:var(--primary-deep);} .btn-soft:hover{background:var(--primary-soft);}
   .btn-danger{background:var(--owe-soft);color:var(--owe);} .btn-danger:hover{background:#ecd0c7;}
+  .action-btn-sm{padding:6px 10px;font-size:.8rem;border-radius:6px;font-weight:600;}
 
   /* Grid Layouts */
   .grid{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,0.8fr);gap:20px;align-items:start;}
   @media (max-width:880px){ .grid{grid-template-columns:1fr;} }
 
+  /* Logo */
+  .logo-container{display:flex;flex-direction:column;align-items:center;gap:10px;margin-bottom:20px;}
+  .logo-r{width:80px;height:80px;background:linear-gradient(135deg, var(--primary) 0%, var(--primary-deep) 100%);color:#fff;font-family:'Fraunces', serif;font-weight:600;font-size:3.5rem;display:grid;place-items:center;border-radius:22px;box-shadow:0 8px 20px rgba(92,131,116,.25);text-shadow:1px 2px 4px rgba(47,59,54,.2);}
+
   /* Login Styles */
-  .login-card{max-width:420px;margin:80px auto;text-align:center;}
+  .login-card{max-width:420px;margin:50px auto;text-align:center;}
   .login-card h2{font-family:'Fraunces',serif;font-size:2rem;margin-bottom:8px;}
   .sso-buttons{display:flex;flex-direction:column;gap:10px;margin:24px 0;}
   .sso-btn{background:#fff;border:1px solid var(--line);border-radius:var(--radius-sm);padding:12px;font-weight:600;color:var(--ink-soft);justify-content:center;gap:10px;transition:all .12s;}
@@ -88,6 +101,12 @@
   .group-card:hover{transform:translateY(-2px);border-color:var(--primary);}
   .group-card h3{margin:0 0 6px;font-family:'Fraunces',serif;font-size:1.2rem;}
   .group-card .meta{font-size:.82rem;color:var(--muted);display:flex;justify-content:space-between;}
+
+  /* Profile View */
+  .profile-card{max-width:500px;margin:40px auto;text-align:center;}
+  .profile-avatar{width:90px;height:90px;border-radius:50%;margin:0 auto 15px;background:var(--primary-soft);display:grid;place-items:center;font-size:2.5rem;font-weight:600;color:var(--primary-deep);border:3px solid var(--line);object-fit:cover;}
+  .premium-tag{display:inline-flex;align-items:center;gap:6px;background:#f5e5c9;color:#b07c2a;font-size:.78rem;font-weight:700;padding:4px 10px;border-radius:999px;margin-top:5px;letter-spacing:.03em;text-transform:uppercase;}
+  .premium-tag svg{fill:currentColor;width:12px;height:12px;}
 
   /* Group details layout */
   .group-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px;}
@@ -182,6 +201,12 @@
   .settled-note .big{font-family:'Fraunces',serif;font-size:1.3rem;display:block;margin-bottom:4px;}
   .moves-note{font-size:.86rem;color:var(--muted);text-align:center;margin:2px 0 18px;}
 
+  /* Admin View Styles */
+  .admin-table-container{overflow-x:auto;margin-top:10px;}
+  table{width:100%;border-collapse:collapse;text-align:left;font-size:.9rem;}
+  th,td{padding:12px;border-bottom:1px solid var(--line);}
+  th{font-weight:600;color:var(--ink-soft);background:var(--surface-2);}
+
   /* Modals */
   .modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(47,59,54,.4);display:none;align-items:center;justify-content:center;padding:20px;z-index:100;backdrop-filter:blur(3px);}
   .modal-overlay.active{display:flex;}
@@ -190,7 +215,7 @@
   .modal-buttons{display:flex;justify-content:flex-end;gap:10px;margin-top:20px;}
 
   .back-btn{background:none;border:none;cursor:pointer;color:var(--primary);font-weight:600;display:inline-flex;align-items:center;gap:6px;font-size:.95rem;padding:0;margin-bottom:15px;}
-  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(100px);background:var(--ink);color:#fff;padding:12px 24px;border-radius:999px;font-size:.9rem;font-weight:500;box-shadow:0 4px 12px rgba(0,0,0,.15);transition:transform .2s ease;z-index:200;}
+  .toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(100px);background:var(--ink);color:#fff;padding:12px 24px;border-radius:999px;font-size:.9rem;font-weight:500;box-shadow:0 4px 12px rgba(0,0,0,.15);transition:transform .2s ease;z-index:200;}
   .toast.active{transform:translateX(-50%) translateY(0);}
 </style>
 </head>
@@ -198,17 +223,19 @@
 <div class="wrap">
   <header>
     <div>
-      <p class="eyebrow">Repartija v2.0</p>
-      <h1>Cuentas claras<em>.</em></h1>
+      <p class="eyebrow">Repartijas v2.1</p>
+      <h1>Repartijas<em>.</em></h1>
     </div>
-    <div id="authHeader"></div>
   </header>
 
   <!-- VISTA 1: LOGIN -->
   <main id="loginView" class="view">
     <div class="card login-card">
-      <h2>Iniciar Sesión</h2>
-      <p class="sub" style="color:var(--muted); font-size:.9rem;">Elegí cómo ingresar para guardar y compartir tus grupos de gastos.</p>
+      <div class="logo-container">
+        <div class="logo-r">R</div>
+        <h2 style="margin:5px 0 0;">Repartijas</h2>
+      </div>
+      <p class="sub" style="color:var(--muted); font-size:.9rem;">Dividir gastos grupales sin vueltas.</p>
       
       <div class="sso-buttons">
         <button class="sso-btn" id="googleLoginBtn">
@@ -250,7 +277,6 @@
           <h2>Mis Grupos</h2>
           <p class="sub">Tus viajes, juntadas y cuentas compartidas.</p>
         </div>
-        <button class="btn" id="openCreateGroupBtn">Nuevo Grupo</button>
       </div>
       
       <div class="groups-list" id="groupsList">
@@ -269,7 +295,8 @@
         <p class="sub" style="margin:2px 0 0; color:var(--muted); font-size:.85rem;" id="groupCodeText">Código: -</p>
       </div>
       <div class="group-actions">
-        <button class="btn btn-soft" id="shareGroupBtn">Compartir Grupo</button>
+        <button class="btn btn-soft" id="shareGroupBtn">Compartir</button>
+        <button class="btn btn-soft" id="editGroupBtn" style="display:none;">Editar</button>
         <button class="btn btn-danger" id="deleteGroupBtn" style="display:none;">Eliminar</button>
       </div>
     </div>
@@ -413,7 +440,94 @@
       </section>
     </div>
   </main>
+
+  <!-- VISTA 4: PERFIL DEL USUARIO -->
+  <main id="profileView" class="view">
+    <div class="card profile-card">
+      <div id="profileAvatar" class="profile-avatar">U</div>
+      <h2 id="profileNameText" style="font-family:'Fraunces',serif; margin:10px 0 2px;">Cargando...</h2>
+      <p id="profileEmailText" style="color:var(--muted); margin:0 0 10px; font-size:.9rem;"></p>
+      
+      <div id="premiumStatusContainer"></div>
+      
+      <div style="margin-top:30px; border-top:1px solid var(--line); padding-top:20px; display:grid; gap:12px;">
+        <button class="btn btn-danger" id="profileLogoutBtn">Cerrar Sesión</button>
+      </div>
+    </div>
+  </main>
+
+  <!-- VISTA 5: PANEL DE ADMINISTRACION -->
+  <main id="adminView" class="view">
+    <div class="card">
+      <h2>Panel de Administración</h2>
+      <p class="sub">Monitoreo general de usuarios y grupos.</p>
+      
+      <div class="tab-nav" style="margin-top:15px;">
+        <button class="tab-btn active" data-tab="adminUsersTab">Usuarios</button>
+        <button class="tab-btn" data-tab="adminGroupsTab">Grupos Creados</button>
+      </div>
+
+      <!-- Admin Tab: Usuarios -->
+      <div id="adminUsersTab" class="tab-content active">
+        <div class="admin-table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Nombre</th>
+                <th>Email</th>
+                <th>Estado</th>
+                <th>Acción Premium</th>
+                <th>Password</th>
+              </tr>
+            </thead>
+            <tbody id="adminUsersList">
+              <tr><td colspan="5" style="text-align:center;">Cargando usuarios...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Admin Tab: Grupos -->
+      <div id="adminGroupsTab" class="tab-content">
+        <div class="admin-table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Grupo</th>
+                <th>Moneda</th>
+                <th>Miembros</th>
+                <th>Creado</th>
+              </tr>
+            </thead>
+            <tbody id="adminGroupsList">
+              <tr><td colspan="5" style="text-align:center;">Cargando grupos...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
 </div>
+
+<!-- Footer Navigation Bar -->
+<nav class="bottom-nav" id="bottomNav">
+  <button class="nav-item active" id="navGroupsBtn">
+    <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    Grupos
+  </button>
+  <button class="nav-item nav-item-center" id="navCreateBtn" title="Nuevo Grupo">
+    <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+  </button>
+  <button class="nav-item" id="navProfileBtn">
+    <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+    Perfil
+  </button>
+  <button class="nav-item" id="navAdminBtn" style="display:none;">
+    <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/></svg>
+    Admin
+  </button>
+</nav>
 
 <!-- Modal: Nuevo Grupo -->
 <div class="modal-overlay" id="createGroupModal">
@@ -444,6 +558,34 @@
   </div>
 </div>
 
+<!-- Modal: Editar Grupo -->
+<div class="modal-overlay" id="editGroupModal">
+  <div class="modal">
+    <h3>Editar Grupo</h3>
+    <div style="display:grid; gap:12px;">
+      <div>
+        <label for="editGroupNameInput">Nombre del Grupo</label>
+        <input type="text" id="editGroupNameInput" maxlength="50">
+      </div>
+      <div>
+        <label for="editGroupCurrencyInput">Moneda de Liquidación</label>
+        <select id="editGroupCurrencyInput">
+          <option value="ARS">🇦🇷 ARS</option>
+          <option value="USD">🇺🇸 USD</option>
+          <option value="EUR">🇪🇺 EUR</option>
+          <option value="BRL">🇧🇷 BRL</option>
+          <option value="CLP">🇨🇱 CLP</option>
+          <option value="UYU">🇺🇾 UYU</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-buttons">
+      <button class="btn btn-soft" id="closeEditGroupBtn">Cancelar</button>
+      <button class="btn" id="submitEditGroupBtn">Guardar</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast">Notificación</div>
 
 <!-- Firebase SDK Imports and SPA logic -->
@@ -456,7 +598,8 @@
     signOut, 
     onAuthStateChanged,
     createUserWithEmailAndPassword,
-    signInWithEmailAndPassword
+    signInWithEmailAndPassword,
+    sendPasswordResetEmail
   } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
   import { 
     getFirestore, 
@@ -502,7 +645,7 @@
 
   // Helpers
   const $ = (id) => document.getElementById(id);
-  const esc = (s) => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c][c] || c));
+  const esc = (s) => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c] || c));
   const initials = (name) => {
     const parts = name.trim().split(/\s+/);
     return (parts[0][0] + (parts[1] ? parts[1][0] : "")).toUpperCase();
@@ -525,25 +668,40 @@
     t.classList.add('active');
     setTimeout(() => t.classList.remove('active'), 2500);
   }
-  window.toast = toast; // Export to global scope for inline onclicks
+  window.toast = toast; // Export to global scope
 
   // Auth Status Watcher
   onAuthStateChanged(auth, async (user) => {
     if (user) {
       currentUser = user;
-      renderAuthHeader();
       
-      // Save user profile info in Firestore (default metadata)
+      // Save/retrieve user profile info in Firestore (default metadata)
       const userRef = doc(db, 'users', user.uid);
+      const userSnap = await getDoc(userRef);
+      let isPremium = false;
+      if (userSnap.exists()) {
+        isPremium = userSnap.data().isPremium || false;
+      }
+      
       await setDoc(userRef, {
         uid: user.uid,
         name: user.displayName || user.email.split('@')[0],
         email: user.email,
         photoURL: user.photoURL || '',
-        createdAt: new Date()
+        createdAt: userSnap.exists() ? userSnap.data().createdAt : new Date()
       }, { merge: true });
 
-      // Router logic or go to groups
+      // Enable bottom nav bar
+      $('bottomNav').classList.add('visible');
+
+      // Check if user is the admin
+      if (user.email === 'nicolasescudero5@gmail.com') {
+        $('navAdminBtn').style.display = 'flex';
+      } else {
+        $('navAdminBtn').style.display = 'none';
+      }
+
+      // Router logic
       const hash = window.location.hash;
       if (hash.startsWith('#/group/')) {
         const gid = hash.split('#/group/')[1];
@@ -556,37 +714,92 @@
       currentUser = null;
       activeGroupId = null;
       activeGroup = null;
-      renderAuthHeader();
+      $('bottomNav').classList.remove('visible');
       showView('loginView');
       window.location.hash = '';
     }
   });
 
-  // Render Auth Badge
-  function renderAuthHeader() {
-    const container = $('authHeader');
-    if (currentUser) {
-      const avatar = currentUser.photoURL 
-        ? `<img src="${currentUser.photoURL}" alt="avatar">`
-        : `<span style="background:var(--primary); color:#fff; width:24px; height:24px; border-radius:50%; display:inline-grid; place-items:center; font-size:.75rem; font-weight:600;">${initials(currentUser.displayName || currentUser.email)}</span>`;
-      container.innerHTML = `
-        <div class="user-badge">
-          ${avatar}
-          <span>${esc(currentUser.displayName || currentUser.email.split('@')[0])}</span>
-          <button class="logout-btn" id="logoutBtn">Salir</button>
-        </div>
-      `;
-      $('logoutBtn').addEventListener('click', () => signOut(auth));
-    } else {
-      container.innerHTML = '';
-    }
-  }
-
   // Views Router helper
   function showView(viewId) {
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
     $(viewId).classList.add('active');
+
+    // Update bottom nav active indicators
+    document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+    if (viewId === 'groupsView' || viewId === 'groupDetailsView') {
+      $('navGroupsBtn').classList.add('active');
+    } else if (viewId === 'profileView') {
+      $('navProfileBtn').classList.add('active');
+    } else if (viewId === 'adminView') {
+      $('navAdminBtn').classList.add('active');
+    }
   }
+
+  // Bottom Nav bar click events
+  $('navGroupsBtn').addEventListener('click', () => {
+    if (currentUser) {
+      if (activeGroupId) {
+        showView('groupDetailsView');
+      } else {
+        showView('groupsView');
+        loadGroups();
+      }
+    }
+  });
+
+  $('navCreateBtn').addEventListener('click', () => {
+    if (currentUser) {
+      $('createGroupModal').classList.add('active');
+    }
+  });
+
+  $('navProfileBtn').addEventListener('click', () => {
+    if (currentUser) {
+      showView('profileView');
+      renderProfileView();
+    }
+  });
+
+  $('navAdminBtn').addEventListener('click', () => {
+    if (currentUser && currentUser.email === 'nicolasescudero5@gmail.com') {
+      showView('adminView');
+      loadAdminPanel();
+    }
+  });
+
+  // Render User Profile View
+  async function renderProfileView() {
+    if (!currentUser) return;
+    const userRef = doc(db, 'users', currentUser.uid);
+    const snap = await getDoc(userRef);
+    const uData = snap.exists() ? snap.data() : { name: currentUser.displayName || currentUser.email, isPremium: false };
+
+    // Avatar
+    if (currentUser.photoURL) {
+      $('profileAvatar').outerHTML = `<img id="profileAvatar" class="profile-avatar" src="${currentUser.photoURL}" alt="Avatar">`;
+    } else {
+      $('profileAvatar').outerHTML = `<div id="profileAvatar" class="profile-avatar">${initials(uData.name)}</div>`;
+    }
+
+    $('profileNameText').textContent = uData.name;
+    $('profileEmailText').textContent = currentUser.email;
+
+    // Premium status indicator
+    const premiumContainer = $('premiumStatusContainer');
+    if (uData.isPremium) {
+      premiumContainer.innerHTML = `
+        <span class="premium-tag">
+          <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+          Miembro Premium
+        </span>
+      `;
+    } else {
+      premiumContainer.innerHTML = `<span class="premium-tag" style="background:var(--line-soft); color:var(--muted);">Plan Estándar</span>`;
+    }
+  }
+
+  $('profileLogoutBtn').addEventListener('click', () => signOut(auth));
 
   // Social Login handlers
   $('googleLoginBtn').addEventListener('click', () => {
@@ -613,7 +826,6 @@
   });
 
   // --- GROUPS LIST SECTION ---
-  $('openCreateGroupBtn').addEventListener('click', () => $('createGroupModal').classList.add('active'));
   $('closeCreateGroupBtn').addEventListener('click', () => $('createGroupModal').classList.remove('active'));
 
   $('submitCreateGroupBtn').addEventListener('click', async () => {
@@ -622,7 +834,10 @@
     if (!name) { toast('Ingresá el nombre del grupo'); return; }
     
     try {
-      const docRef = await addDoc(collection(db, 'groups'), {
+      // Generate ID client-side first to satisfy firestore.rules Schema requirements
+      const docRef = doc(collection(db, 'groups'));
+      await setDoc(docRef, {
+        id: docRef.id,
         name: name,
         ownerId: currentUser.uid,
         currency: currency,
@@ -633,8 +848,6 @@
         createdAt: new Date(),
         updatedAt: new Date()
       });
-      // Update with matching ID
-      await updateDoc(docRef, { id: docRef.id });
 
       $('newGroupName').value = '';
       $('createGroupModal').classList.remove('active');
@@ -652,7 +865,7 @@
     onSnapshot(q, (snapshot) => {
       const container = $('groupsList');
       if (snapshot.empty) {
-        container.innerHTML = '<p class="empty">No estás en ningún grupo todavía. ¡Creá uno nuevo o pedile el link a un amigo!</p>';
+        container.innerHTML = '<p class="empty">No estás en ningún grupo todavía. ¡Creá uno presionando el botón "+" de abajo!</p>';
         return;
       }
       
@@ -684,7 +897,6 @@
     const params = new URLSearchParams(window.location.search);
     const inviteId = params.get('invite');
     if (inviteId) {
-      // Clear URL parameter so it doesn't loop
       const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + window.location.hash;
       window.history.replaceState({path: newUrl}, '', newUrl);
 
@@ -744,11 +956,13 @@
       $('groupCodeText').textContent = `ID de Invitación: ${activeGroup.id}`;
       $('settlementCurrencyText').textContent = `Liquidar saldos en ${activeGroup.currency} ${flags[activeGroup.currency] || ""}`;
 
-      // Admin actions
+      // Admin & Owner actions
       if (activeGroup.ownerId === currentUser.uid) {
         $('deleteGroupBtn').style.display = 'inline-flex';
+        $('editGroupBtn').style.display = 'inline-flex';
       } else {
         $('deleteGroupBtn').style.display = 'none';
+        $('editGroupBtn').style.display = 'none';
       }
 
       // Populate Selects
@@ -778,12 +992,40 @@
     window.location.hash = '';
   });
 
+  // Edit Group Modal Actions
+  $('editGroupBtn').addEventListener('click', () => {
+    if (!activeGroup) return;
+    $('editGroupNameInput').value = activeGroup.name;
+    $('editGroupCurrencyInput').value = activeGroup.currency;
+    $('editGroupModal').classList.add('active');
+  });
+
+  $('closeEditGroupBtn').addEventListener('click', () => $('editGroupModal').classList.remove('active'));
+
+  $('submitEditGroupBtn').addEventListener('click', async () => {
+    const newName = $('editGroupNameInput').value.trim();
+    const newCurrency = $('editGroupCurrencyInput').value;
+    if (!newName) { toast('Ingresá el nombre del grupo'); return; }
+
+    try {
+      await updateDoc(doc(db, 'groups', activeGroupId), {
+        name: newName,
+        currency: newCurrency,
+        updatedAt: new Date()
+      });
+      $('editGroupModal').classList.remove('active');
+      toast('Grupo actualizado con éxito');
+    } catch(err) {
+      toast('Error al actualizar: ' + err.message);
+    }
+  });
+
   // Share invite link
   $('shareGroupBtn').addEventListener('click', async () => {
     if (!activeGroup) return;
     const inviteUrl = `${window.location.protocol}//${window.location.host}${window.location.pathname}?invite=${activeGroup.id}`;
     const shareData = {
-      title: `Unite a ${activeGroup.name} en Repartija`,
+      title: `Unite a ${activeGroup.name} en Repartijas`,
       text: `Te invito a dividir los gastos en el grupo "${activeGroup.name}". Entrá al link para unirte:`,
       url: inviteUrl
     };
@@ -797,7 +1039,7 @@
     } else {
       // Fallback clipboard
       navigator.clipboard.writeText(inviteUrl).then(() => {
-        toast('¡Link de invitación copiado al portapapeles!');
+        toast('¡Link de invitación copiado!');
       }).catch(err => {
         toast('Error al copiar el link: ' + err.name);
       });
@@ -809,15 +1051,13 @@
     if (!activeGroup || activeGroup.ownerId !== currentUser.uid) return;
     if (confirm('¿Seguro que querés eliminar permanentemente este grupo y todos sus gastos?')) {
       try {
-        // Delete all expenses first
         const expQuery = collection(db, 'groups', activeGroupId, 'expenses');
         const snaps = await getDocs(expQuery);
         const batchPromises = snaps.docs.map(d => deleteDoc(d.ref));
         await Promise.all(batchPromises);
 
-        // Delete group
         await deleteDoc(doc(db, 'groups', activeGroupId));
-        toast('Grupo eliminado con éxito');
+        toast('Grupo eliminado');
         $('backToGroupsBtn').click();
       } catch (err) {
         toast('Error al eliminar: ' + err.message);
@@ -829,13 +1069,26 @@
   document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       const tabId = btn.getAttribute('data-tab');
-      switchTab(tabId);
+      // Admin page tabs or group details tabs
+      if (tabId === 'adminUsersTab' || tabId === 'adminGroupsTab') {
+        switchAdminTab(tabId);
+      } else {
+        switchTab(tabId);
+      }
     });
   });
 
   function switchTab(tabId) {
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    document.querySelectorAll('#groupDetailsView .tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('#groupDetailsView .tab-content').forEach(c => c.classList.remove('active'));
+    
+    document.querySelector(`[data-tab="${tabId}"]`).classList.add('active');
+    $(tabId).classList.add('active');
+  }
+
+  function switchAdminTab(tabId) {
+    document.querySelectorAll('#adminView .tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('#adminView .tab-content').forEach(c => c.classList.remove('active'));
     
     document.querySelector(`[data-tab="${tabId}"]`).classList.add('active');
     $(tabId).classList.add('active');
@@ -859,7 +1112,6 @@
 
   async function fetchExchangeRate(from, to) {
     const cacheKey = `${from}_${to}`;
-    // Cache for 1 hour to prevent API hitting limits
     if (exchangeRatesCache[cacheKey] && (Date.now() - exchangeRatesCache[cacheKey].time < 3600000)) {
       return exchangeRatesCache[cacheKey].rate;
     }
@@ -875,7 +1127,7 @@
     } catch (err) {
       console.error('Error fetching rates API:', err);
     }
-    return 1.0; // Fallback
+    return 1.0;
   }
 
   // --- PARTICIPANTS TAB LOGIC ---
@@ -884,14 +1136,12 @@
     if (!name || !activeGroup) return;
 
     const parts = activeGroup.participants || {};
-    // Check if participant name already exists locally
     if (Object.values(parts).some(p => p.name.toLowerCase() === name.toLowerCase())) {
       toast('Ese nombre ya existe');
       $('personNameInput').value = '';
       return;
     }
 
-    // Generate local ID
     let seq = 1;
     while (parts[String(seq)]) seq++;
     const newId = String(seq);
@@ -917,7 +1167,6 @@
   async function removePerson(pid) {
     if (!activeGroup) return;
     
-    // Check if participant is used in any loaded expenses
     const used = expenses.some(e => e.payer === pid || e.split.includes(pid));
     if (used) {
       toast('No podés quitar a un participante que tiene gastos asociados.');
@@ -927,10 +1176,8 @@
     const parts = { ...activeGroup.participants };
     delete parts[pid];
 
-    // Clean up couples
     const couples = activeGroup.couples.filter(c => !c.includes(pid));
 
-    // Clean up specific rules
     Object.keys(parts).forEach(k => {
       if (parts[k].paysTo === pid) parts[k].paysTo = null;
     });
@@ -950,15 +1197,12 @@
   function renderFormParticipants() {
     const pSelectPayer = $('expPayer');
     const splitGrid = $('splitGrid');
-    
     const parts = Object.values(activeGroup.participants || {});
     
-    // Payer selector
     const currentPayer = pSelectPayer.value;
     pSelectPayer.innerHTML = parts.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('');
     if (currentPayer && parts.some(p => p.id === currentPayer)) pSelectPayer.value = currentPayer;
 
-    // Split grid checklist
     const prevChecked = Array.from(splitGrid.querySelectorAll('input:checked')).map(i => i.value);
     const isAllInitially = prevChecked.length === 0;
     
@@ -969,22 +1213,6 @@
 
     updateSplitCount();
   }
-
-  function updateSplitCount() {
-    const checklist = $('splitGrid').querySelectorAll('input');
-    const checked = $('splitGrid').querySelectorAll('input:checked');
-    const n = checked.length, t = checklist.length;
-    
-    $('splitCount').textContent = (n === t && t > 0) ? `Todos (${n})` : (n === 0 ? "Nadie" : `${n} de ${t}`);
-    $('toggleAllBtn').textContent = (n === t) ? "Ninguno" : "Todos";
-  }
-
-  $('toggleAllBtn').addEventListener('click', () => {
-    const checklist = Array.from($('splitGrid').querySelectorAll('input'));
-    const all = checklist.every(i => i.checked);
-    checklist.forEach(i => i.checked = !all);
-    updateSplitCount();
-  });
 
   function renderChips() {
     const parts = Object.values(activeGroup.participants || {});
@@ -1009,7 +1237,6 @@
   }
 
   function renderAliasPanel() {
-    // Generate list of local participant IDs who have paid in the currently loaded expenses
     const payers = Array.from(new Set(expenses.map(e => e.payer))).filter(pid => activeGroup.participants[pid]);
     const container = $('aliasPanel');
     
@@ -1048,8 +1275,6 @@
   function renderPairsList() {
     const pairA = $('pairA');
     const pairB = $('pairB');
-    const parts = Object.values(activeGroup.participants || {});
-    
     fillSelectPair(pairA); fillSelectPair(pairB);
 
     $('pairList').innerHTML = activeGroup.couples.length ? activeGroup.couples.map((c, i) => `
@@ -1075,7 +1300,6 @@
   function fillSelectPair(sel) {
     const parts = Object.values(activeGroup.participants || {});
     const busyIds = activeGroup.couples.flat();
-    
     sel.innerHTML = '<option value="">Persona...</option>' + parts
       .filter(p => !busyIds.includes(p.id))
       .map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('');
@@ -1151,7 +1375,6 @@
     }
   });
 
-  // Helpers mapping indexes and colors
   function colorFor(pid) {
     if (!activeGroup) return '#5C8374';
     const parts = Object.keys(activeGroup.participants || {}).sort();
@@ -1252,12 +1475,10 @@
       $('expDesc').value = '';
       $('expAmount').value = '';
       
-      // Reset rate selector to default
       $('expCurrency').value = activeGroup.currency;
       $('expCurrency').dispatchEvent(new Event('change'));
 
       toast('Gasto agregado');
-      // Reload history
       loadGroup(activeGroupId);
     } catch(err) {
       toast('Error al guardar gasto: ' + err.message);
@@ -1288,7 +1509,7 @@
       const splitNames = e.split.map(firstName).join(', ');
       
       const rateText = e.exchangeRate !== 1 
-        ? `<span class="currency-badge">${e.amount.toFixed(2)} ${e.currency} (tipo de cambio: ${e.exchangeRate})</span>`
+        ? `<span class="currency-badge">${e.amount.toFixed(2)} ${e.currency} (tipo: ${e.exchangeRate})</span>`
         : '';
 
       const groupCurrency = activeGroup ? activeGroup.currency : 'ARS';
@@ -1328,17 +1549,12 @@
       return;
     }
 
-    // Step 1: Initialize balances map
     const bal = {};
     parts.forEach(p => bal[p.id] = 0);
 
-    // Step 2: Accumulate expenses
-    // We compute in the group's settlement currency
     expenses.forEach(e => {
-      // Payer gets credit
       if (bal[e.payer] !== undefined) bal[e.payer] += e.cents;
       
-      // Split members pay equal shares
       const n = e.split.length;
       if (n > 0) {
         const share = Math.floor(e.cents / n);
@@ -1361,7 +1577,6 @@
       <div class="stat"><div class="k">Participantes</div><div class="v">${parts.length}</div></div>
     `;
 
-    // Step 3: Couples grouping
     const used = {};
     const units = [];
     activeGroup.couples.forEach(c => {
@@ -1382,7 +1597,6 @@
       }
     });
 
-    // Step 4: Render balances
     const maxAbs = Math.max(1, ...units.map(u => Math.abs(u.bal)));
     
     $('balancesList').innerHTML = units.slice().sort((a,b) => b.bal - a.bal).map(u => {
@@ -1414,12 +1628,10 @@
       `;
     }).join('');
 
-    // Step 5: Settle balances (Minimize transfers algorithm)
     const creds = units.filter(u => u.bal > 0).map(u => ({ ids: u.ids, rem: u.bal }));
     const debs = units.filter(u => u.bal < 0).map(u => ({ ids: u.ids, rem: -u.bal }));
     const moves = [];
 
-    // Helper functions
     const getPayerTarget = (ids) => {
       for (let i = 0; i < ids.length; i++) {
         const p = activeGroup.participants[ids[i]];
@@ -1429,7 +1641,6 @@
     };
     const crByMember = (pid) => creds.find(c => c.rem > 0 && c.ids.includes(pid));
 
-    // Handle explicit rules (who pays whom)
     debs.forEach(d => {
       const target = getPayerTarget(d.ids);
       if (target) {
@@ -1445,7 +1656,6 @@
       }
     });
 
-    // Solve remaining balances greedily
     const remainingDebs = debs.filter(d => d.rem > 0).sort((a,b) => b.rem - a.rem);
     remainingDebs.forEach(d => {
       let loopLimit = 0;
@@ -1453,7 +1663,6 @@
         const av = creds.filter(c => c.rem > 0);
         if (!av.length) break;
 
-        // Try exact fit, otherwise largest creditor
         const fit = av.filter(c => c.rem >= d.rem).sort((a,b) => a.rem - b.rem)[0];
         const c = fit || av.sort((a,b) => b.rem - a.rem)[0];
 
@@ -1464,7 +1673,6 @@
       }
     });
 
-    // Step 6: Render transfers list
     const getUnitAlias = (ids) => ids.map(id => activeGroup.participants[id]?.alias?.trim() || '').filter(Boolean).join('  ·  ');
     
     if (!moves.length) {
@@ -1506,6 +1714,104 @@
         </div>
       `;
     }).join('');
+  }
+
+  // --- ADMIN VIEW PANEL LOGIC ---
+  async function loadAdminPanel() {
+    if (!currentUser || currentUser.email !== 'nicolasescudero5@gmail.com') return;
+
+    switchAdminTab('adminUsersTab');
+    
+    // Load Users
+    try {
+      const snap = await getDocs(collection(db, 'users'));
+      const uList = snap.docs.map(doc => doc.data());
+      const container = $('adminUsersList');
+      
+      if (!uList.length) {
+        container.innerHTML = '<tr><td colspan="5" style="text-align:center;">No hay usuarios registrados.</td></tr>';
+      } else {
+        container.innerHTML = uList.map(u => {
+          const premLabel = u.isPremium ? 'Premium' : 'Estándar';
+          const premBtnLabel = u.isPremium ? 'Quitar Premium' : 'Hacer Premium';
+          const premBtnClass = u.isPremium ? 'btn-danger' : '';
+          
+          return `
+            <tr>
+              <td><b>${esc(u.name)}</b></td>
+              <td>${esc(u.email)}</td>
+              <td><span style="font-weight:600; color:${u.isPremium ? '#b07c2a' : 'var(--ink-soft)'};">${premLabel}</span></td>
+              <td>
+                <button class="btn action-btn-sm ${premBtnClass} toggle-premium-btn" data-uid="${u.uid}" data-state="${u.isPremium || false}">
+                  ${premBtnLabel}
+                </button>
+              </td>
+              <td>
+                <button class="btn btn-soft action-btn-sm reset-pwd-btn" data-email="${u.email}">
+                  Reset Password
+                </button>
+              </td>
+            </tr>
+          `;
+        }).join('');
+
+        // Wire Up events for Premium Toggles
+        container.querySelectorAll('.toggle-premium-btn').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            const uid = btn.getAttribute('data-uid');
+            const state = btn.getAttribute('data-state') === 'true';
+            try {
+              await updateDoc(doc(db, 'users', uid), { isPremium: !state });
+              toast('Estado premium actualizado');
+              loadAdminPanel();
+            } catch(e) {
+              toast('Error al actualizar premium: ' + e.message);
+            }
+          });
+        });
+
+        // Wire Up events for Reset Passwords
+        container.querySelectorAll('.reset-pwd-btn').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            const email = btn.getAttribute('data-email');
+            try {
+              await sendPasswordResetEmail(auth, email);
+              toast('Email de restablecimiento enviado a ' + email);
+            } catch(e) {
+              toast('Error al enviar email: ' + e.message);
+            }
+          });
+        });
+      }
+    } catch(err) {
+      toast('Error al cargar panel de usuarios: ' + err.message);
+    }
+
+    // Load Groups
+    try {
+      const snap = await getDocs(collection(db, 'groups'));
+      const gList = snap.docs.map(doc => doc.data());
+      const container = $('adminGroupsList');
+      
+      if (!gList.length) {
+        container.innerHTML = '<tr><td colspan="5" style="text-align:center;">No hay grupos creados.</td></tr>';
+      } else {
+        container.innerHTML = gList.map(g => {
+          const dateStr = g.createdAt ? new Date(g.createdAt.toDate()).toLocaleDateString('es-AR') : '-';
+          return `
+            <tr>
+              <td><span style="font-size:.78rem; font-family:monospace; color:var(--muted);">${g.id}</span></td>
+              <td><b>${esc(g.name)}</b></td>
+              <td>${g.currency}</td>
+              <td>${g.members ? g.members.length : 1}</td>
+              <td>${dateStr}</td>
+            </tr>
+          `;
+        }).join('');
+      }
+    } catch(err) {
+      toast('Error al cargar panel de grupos: ' + err.message);
+    }
   }
 
   // Register Service Worker

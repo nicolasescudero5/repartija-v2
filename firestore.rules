@@ -11,6 +11,7 @@ rules_version = '2';
 //   - name: string (required) - display name, max 50 chars
 //   - email: string (required) - user's email address
 //   - photoURL: string (optional) - URL, max 300 chars
+//   - isPremium: bool (optional) - defaults to false if missing
 //   - createdAt: timestamp (required)
 //
 // Collection: groups
@@ -63,9 +64,15 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
+    function isAdmin() {
+      return isAuthenticated() && request.auth.token.email == 'nicolasescudero5@gmail.com';
+    }
+
     function isGroupMember(groupId) {
-      return isAuthenticated() && 
-        request.auth.uid in get(/databases/$(database)/documents/groups/$(groupId)).data.members;
+      return isAuthenticated() && (
+        request.auth.uid in get(/databases/$(database)/documents/groups/$(groupId)).data.members ||
+        request.auth.token.email == 'nicolasescudero5@gmail.com'
+      );
     }
 
     function hasRequiredFields(data, fields) {
@@ -93,11 +100,12 @@ service cloud.firestore {
 
     function isValidUser(data) {
       return hasRequiredFields(data, ['uid', 'name', 'email', 'createdAt']) &&
-             hasOnlyAllowedFields(data, ['uid', 'name', 'email', 'photoURL', 'createdAt']) &&
+             hasOnlyAllowedFields(data, ['uid', 'name', 'email', 'photoURL', 'isPremium', 'createdAt']) &&
              data.uid == request.auth.uid &&
              data.name is string && data.name.size() > 0 && data.name.size() <= 50 &&
              isValidEmail(data.email) &&
              (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() <= 300)) &&
+             (!('isPremium' in data) || data.isPremium is bool) &&
              data.createdAt is timestamp;
     }
 
@@ -137,29 +145,33 @@ service cloud.firestore {
 
     // Users Collection
     match /users/{userId} {
-      allow read: if isAuthenticated(); // Allowed so members can resolve names/emails in lists
+      allow read: if isAuthenticated(); // Allowed so admin and members can query user metadata
       allow create: if isOwner(userId) && isValidUser(request.resource.data) && isRecent(request.resource.data.createdAt);
-      allow update: if isOwner(userId) && isValidUser(request.resource.data) && 
-                      request.resource.data.createdAt == resource.data.createdAt;
-      allow delete: if false; // Users cannot delete their accounts programmatically
+      allow update: if (isOwner(userId) && isValidUser(request.resource.data) && 
+                      request.resource.data.createdAt == resource.data.createdAt &&
+                      (!('isPremium' in request.resource.data) || request.resource.data.isPremium == resource.data.isPremium)) // users cannot update their own premium status
+                      || isAdmin(); // admin can toggle premium status
+      allow delete: if false;
     }
 
     // Groups Collection
     match /groups/{groupId} {
-      allow read: if isAuthenticated() && request.auth.uid in resource.data.members;
+      allow read: if isAuthenticated() && (request.auth.uid in resource.data.members || isAdmin());
       allow create: if isAuthenticated() && 
                       request.resource.data.ownerId == request.auth.uid &&
                       request.auth.uid in request.resource.data.members &&
                       isValidGroup(request.resource.data) &&
                       isRecent(request.resource.data.createdAt);
-      allow update: if isAuthenticated() && 
-                      request.auth.uid in resource.data.members &&
-                      request.auth.uid in request.resource.data.members &&
-                      isValidGroup(request.resource.data) &&
-                      request.resource.data.ownerId == resource.data.ownerId &&
-                      request.resource.data.createdAt == resource.data.createdAt &&
-                      isRecent(request.resource.data.updatedAt);
-      allow delete: if isAuthenticated() && resource.data.ownerId == request.auth.uid;
+      allow update: if isAuthenticated() && (
+                      (request.auth.uid in resource.data.members &&
+                       request.auth.uid in request.resource.data.members &&
+                       isValidGroup(request.resource.data) &&
+                       request.resource.data.ownerId == resource.data.ownerId &&
+                       request.resource.data.createdAt == resource.data.createdAt &&
+                       isRecent(request.resource.data.updatedAt)) ||
+                      isAdmin()
+                    );
+      allow delete: if isAuthenticated() && (resource.data.ownerId == request.auth.uid || isAdmin());
 
       // Expenses Subcollection
       match /expenses/{expenseId} {
