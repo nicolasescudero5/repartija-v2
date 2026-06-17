@@ -1,5 +1,18 @@
 {
   "firestore": {
     "rules": "firestore.rules"
+  },
+  "auth": {
+    "providers": {
+      "emailPassword": true,
+      "googleSignIn": {
+        "oAuthBrandDisplayName": "Repartijas",
+        "supportEmail": "nicolasescudero5@gmail.com",
+        "authorizedRedirectUris": [
+          "https://nicolasescudero5.github.io/repartija-v2/",
+          "https://nicolasescudero5.github.io"
+        ]
+      }
+    }
   }
 }
