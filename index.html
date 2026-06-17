@@ -223,6 +223,7 @@
     gap: 8px;
     margin-bottom: 15px;
     align-items: center;
+    justify-content: flex-end;
   }
   .action-icon-btn {
     background: var(--surface);
@@ -696,6 +697,7 @@
 
   // Application State
   let currentUser = null;
+  let currentUserDefaultAlias = '';
   let activeGroup = null;
   let activeGroupId = null;
   let activeGroupListener = null;
@@ -747,7 +749,11 @@
       const userSnap = await getDoc(userRef);
       let isPremium = false;
       if (userSnap.exists()) {
-        isPremium = userSnap.data().isPremium || false;
+        const uData = userSnap.data();
+        isPremium = uData.isPremium || false;
+        currentUserDefaultAlias = uData.defaultAlias || '';
+      } else {
+        currentUserDefaultAlias = '';
       }
       
       await setDoc(userRef, {
@@ -889,7 +895,21 @@
       await setDoc(doc(db, 'users', currentUser.uid), {
         defaultAlias: alias
       }, { merge: true });
+      currentUserDefaultAlias = alias; // Update global cache
       toast('Alias guardado por defecto');
+
+      // Propagate update to active group if user is a linked participant
+      if (activeGroup && activeGroupId) {
+        const parts = { ...activeGroup.participants };
+        const myPart = Object.values(parts).find(p => String(p.userId) === String(currentUser.uid));
+        if (myPart && myPart.alias !== alias) {
+          myPart.alias = alias;
+          await updateDoc(doc(db, 'groups', activeGroupId), {
+            participants: parts,
+            updatedAt: new Date()
+          });
+        }
+      }
     } catch(err) {
       toast('Error al guardar alias: ' + err.message);
     }
@@ -1142,6 +1162,22 @@
     if (activeGroupListener) activeGroupListener(); // Unsubscribe previous
     if (expensesListener) expensesListener();
 
+    // Reset group-specific state immediately on load to prevent stale data mixing
+    activeGroup = null;
+    expenses = [];
+    
+    // Clear UI inputs and show loading state
+    $('groupNameText').textContent = 'Cargando...';
+    $('groupCodeText').textContent = 'ID de Invitación: -';
+    $('expList').innerHTML = '<p class="empty">Cargando gastos...</p>';
+    $('chips').innerHTML = '<p class="empty">Cargando...</p>';
+    $('aliasPanel').innerHTML = '<p class="empty">Cargando...</p>';
+    $('pairList').innerHTML = '<p class="empty">Cargando...</p>';
+    $('ruleList').innerHTML = '<p class="empty">Cargando...</p>';
+    $('balancesList').innerHTML = '<p class="empty">Cargando...</p>';
+    $('settlementList').innerHTML = '<div class="settled-note"><span class="big">Cargando...</span></div>';
+    $('totals').innerHTML = '';
+
     activeGroupId = gid;
     window.location.hash = `/group/${gid}`;
     showView('groupDetailsView');
@@ -1161,6 +1197,22 @@
       activeGroup.couples = activeGroup.couples || [];
       activeGroup.rules = activeGroup.rules || {};
       
+      // Normalize all couples to strings
+      activeGroup.couples = activeGroup.couples.map(c => c.map(String));
+
+      // Auto-complete default alias for the logged-in user if they are a participant and their alias is empty
+      if (currentUser && currentUserDefaultAlias) {
+        const myPart = Object.values(activeGroup.participants).find(p => String(p.userId) === String(currentUser.uid));
+        if (myPart && !myPart.alias) {
+          myPart.alias = currentUserDefaultAlias;
+          // Update in DB silently
+          updateDoc(doc(db, 'groups', activeGroupId), {
+            participants: activeGroup.participants,
+            updatedAt: new Date()
+          }).catch(err => console.error("Error auto-updating participant alias:", err));
+        }
+      }
+
       // Update UI elements
       $('groupNameText').textContent = activeGroup.name;
       $('groupCodeText').textContent = `ID de Invitación: ${activeGroup.id}`;
@@ -1184,10 +1236,12 @@
       
       // Compute balances and calculations
       computeAndRenderBalances();
+    }, (err) => {
+      toast('Error al cargar detalles del grupo: ' + err.message);
+      showView('groupsView');
     });
 
     // Reset pagination state and load expenses
-    expenses = [];
     lastVisibleExpense = null;
     hasMoreExpenses = true;
     loadExpenses();
@@ -1401,6 +1455,7 @@
   }
 
   function renderFormParticipants() {
+    if (!activeGroup) return;
     const pSelectPayer = $('expPayer');
     const splitGrid = $('splitGrid');
     const parts = Object.values(activeGroup.participants || {});
@@ -1421,6 +1476,7 @@
   }
 
   function renderChips() {
+    if (!activeGroup) return;
     const parts = Object.values(activeGroup.participants || {});
     if (!parts.length) {
       chips.innerHTML = '<p class="empty">No hay nadie cargado en el grupo. Agregá al primero arriba.</p>';
@@ -1477,6 +1533,7 @@
   }
 
   function renderAliasPanel() {
+    if (!activeGroup) return;
     const parts = Object.values(activeGroup.participants || {});
     const container = $('aliasPanel');
     
@@ -1485,11 +1542,15 @@
       return;
     }
 
-    const currentUserParticipant = parts.find(p => p.userId === currentUser.uid);
+    const activeEl = document.activeElement;
+    const focusedPid = activeEl && activeEl.classList.contains('alias-input') ? activeEl.getAttribute('data-pid') : null;
+    const focusedValue = focusedPid ? activeEl.value : null;
+
+    const currentUserParticipant = currentUser ? parts.find(p => String(p.userId) === String(currentUser.uid)) : null;
     const isLinkedToAny = !!currentUserParticipant;
 
     container.innerHTML = parts.map(p => {
-      const isMe = p.userId === currentUser.uid;
+      const isMe = currentUser && String(p.userId) === String(currentUser.uid);
       const isLinked = !!p.userId;
       
       let linkButton = '';
@@ -1501,14 +1562,26 @@
         linkButton = `<span style="font-size: 0.7rem; color: var(--muted); margin-left: 5px;" title="Vinculado a otro usuario">👤</span>`;
       }
 
+      const val = p.id === focusedPid ? focusedValue : (p.alias || '');
+
       return `
         <div class="alias-row">
           <span class="avatar" style="background:${colorFor(p.id)}">${initials(p.name)}</span>
           <span class="nm">${esc(p.name.split(' ')[0])} ${linkButton}</span>
-          <input type="text" class="alias-input" data-pid="${p.id}" value="${esc(p.alias || '')}" placeholder="alias / CBU / CVU">
+          <input type="text" class="alias-input" data-pid="${p.id}" value="${esc(val)}" placeholder="alias / CBU / CVU">
         </div>
       `;
     }).join('');
+
+    // Restore focus if it was lost
+    if (focusedPid) {
+      const inputToFocus = container.querySelector(`input[data-pid="${focusedPid}"]`);
+      if (inputToFocus) {
+        inputToFocus.focus();
+        const valLen = inputToFocus.value.length;
+        inputToFocus.setSelectionRange(valLen, valLen);
+      }
+    }
 
     container.querySelectorAll('.claim-identity-btn').forEach(btn => {
       btn.addEventListener('click', async () => {
@@ -1520,6 +1593,12 @@
     });
 
     container.querySelectorAll('.alias-input').forEach(input => {
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          input.blur();
+        }
+      });
+
       input.addEventListener('change', async (e) => {
         const pid = input.getAttribute('data-pid');
         const val = input.value.trim();
@@ -1530,19 +1609,28 @@
             participants: parts,
             updatedAt: new Date()
           });
+
+          // Sync default profile alias if it's the current user
+          if (currentUser && String(parts[pid].userId) === String(currentUser.uid)) {
+            currentUserDefaultAlias = val;
+            await setDoc(doc(db, 'users', currentUser.uid), {
+              defaultAlias: val
+            }, { merge: true });
+          }
         }
       });
     });
   }
 
   function renderPairsList() {
+    if (!activeGroup) return;
     const pairA = $('pairA');
     const pairB = $('pairB');
     fillSelectPair(pairA); fillSelectPair(pairB);
 
     $('pairList').innerHTML = activeGroup.couples.length ? activeGroup.couples.map((c, i) => `
       <span class="pair">
-        ${esc(firstName(c[0]))} &amp; ${esc(firstName(c[1]))}
+        ${esc(firstName(String(c[0])))} &amp; ${esc(firstName(String(c[1])))}
         <button class="x rm-pair-btn" data-index="${i}">&times;</button>
       </span>
     `).join('') : '<p class="hint">Sin parejas: cada uno paga por su cuenta.</p>';
@@ -1561,10 +1649,11 @@
   }
 
   function fillSelectPair(sel) {
+    if (!activeGroup) return;
     const parts = Object.values(activeGroup.participants || {});
-    const busyIds = activeGroup.couples.flat();
+    const busyIds = activeGroup.couples.flat().map(String);
     sel.innerHTML = '<option value="">Persona...</option>' + parts
-      .filter(p => !busyIds.includes(p.id))
+      .filter(p => !busyIds.includes(String(p.id)))
       .map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('');
   }
 
@@ -1580,6 +1669,7 @@
   });
 
   function renderRulesList() {
+    if (!activeGroup) return;
     const ruleP = $('ruleP');
     const ruleT = $('ruleT');
     const parts = Object.values(activeGroup.participants || {});
@@ -1588,13 +1678,13 @@
     
     const pSelected = ruleP.value;
     ruleT.innerHTML = '<option value="">...le paga a</option>' + parts
-      .filter(p => p.id !== pSelected)
+      .filter(p => String(p.id) !== String(pSelected))
       .map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('');
 
     const ruledPeople = parts.filter(p => p.paysTo);
     $('ruleList').innerHTML = ruledPeople.length ? ruledPeople.map(p => `
       <span class="rule">
-        ${esc(firstName(p.id))} <span class="arrow">&rarr;</span> ${esc(firstName(p.paysTo))}
+        ${esc(firstName(String(p.id)))} <span class="arrow">&rarr;</span> ${esc(firstName(String(p.paysTo)))}
         <button class="x rm-rule-btn" data-pid="${p.id}">&times;</button>
       </span>
     `).join('') : '<p class="hint">Sin reglas: todos pueden pagarle a cualquiera.</p>';
@@ -1615,10 +1705,11 @@
   }
 
   $('ruleP').addEventListener('change', () => {
+    if (!activeGroup) return;
     const parts = Object.values(activeGroup.participants || {});
     const pSelected = $('ruleP').value;
     $('ruleT').innerHTML = '<option value="">...le paga a</option>' + parts
-      .filter(p => p.id !== pSelected)
+      .filter(p => String(p.id) !== String(pSelected))
       .map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('');
   });
 
@@ -1639,69 +1730,35 @@
   });
 
   function colorFor(pid) {
-    if (!activeGroup) return '#5C8374';
+    if (!activeGroup || !activeGroup.participants) return '#5C8374';
     const parts = Object.keys(activeGroup.participants || {}).sort();
-    const idx = parts.indexOf(pid);
+    const idx = parts.indexOf(String(pid));
     const PALETTE = ["#5C8374","#C07A68","#7B9EA8","#B08968","#8A9B6E","#9C7CA5","#6B8E9E","#C0986B","#86A079","#B07C8E"];
     return PALETTE[(idx < 0 ? 0 : idx) % PALETTE.length];
   }
   function firstName(pid) {
-    if (!activeGroup || !activeGroup.participants[pid]) return "?";
-    return activeGroup.participants[pid].name.split(' ')[0];
+    if (!activeGroup || !activeGroup.participants || !activeGroup.participants[String(pid)]) return "?";
+    return activeGroup.participants[String(pid)].name.split(' ')[0];
   }
 
   // --- EXPENSES DB LOGIC ---
-  async function loadExpenses(loadMore = false) {
+  async function loadExpenses() {
     if (!activeGroupId) return;
 
     let q = query(
       collection(db, 'groups', activeGroupId, 'expenses'),
-      orderBy('createdAt', 'desc'),
-      limit(EXPENSES_LIMIT)
+      orderBy('createdAt', 'desc')
     );
 
-    if (loadMore && lastVisibleExpense) {
-      q = query(
-        collection(db, 'groups', activeGroupId, 'expenses'),
-        orderBy('createdAt', 'desc'),
-        startAfter(lastVisibleExpense),
-        limit(EXPENSES_LIMIT)
-      );
-    }
-
-    try {
-      const snap = await getDocs(q);
-      if (snap.empty) {
-        if (!loadMore) {
-          expenses = [];
-          renderExpenses();
-        }
-        hasMoreExpenses = false;
-        $('loadMoreExpensesBtn').style.display = 'none';
-        return;
-      }
-
-      const list = snap.docs.map(doc => doc.data());
-      lastVisibleExpense = snap.docs[snap.docs.length - 1];
-      
-      if (loadMore) {
-        expenses = [...expenses, ...list];
-      } else {
-        expenses = list;
-      }
-      
-      hasMoreExpenses = snap.docs.length === EXPENSES_LIMIT;
-      $('loadMoreExpensesBtn').style.display = hasMoreExpenses ? 'block' : 'none';
-
+    expensesListener = onSnapshot(q, (snapshot) => {
+      expenses = snapshot.docs.map(doc => doc.data());
       renderExpenses();
       renderAliasPanel();
       computeAndRenderBalances();
-    } catch(err) {
+    }, (err) => {
       toast('Error al cargar gastos: ' + err.message);
-    }
+    });
   }
-
-  $('loadMoreExpensesBtn').addEventListener('click', () => loadExpenses(true));
 
   // Open and close add expense modal logic
   function openAddExpenseModal() {
@@ -1776,6 +1833,7 @@
   }
 
   function renderExpenses() {
+    if (!activeGroup) return;
     const container = $('expList');
     if (!expenses.length) {
       container.innerHTML = '<p class="empty">No hay gastos en este grupo.</p>';
@@ -1828,10 +1886,11 @@
     }
 
     const bal = {};
-    parts.forEach(p => bal[p.id] = 0);
+    parts.forEach(p => bal[String(p.id)] = 0);
 
     expenses.forEach(e => {
-      if (bal[e.payer] !== undefined) bal[e.payer] += e.cents;
+      const payerId = String(e.payer);
+      if (bal[payerId] !== undefined) bal[payerId] += e.cents;
       
       const n = e.split.length;
       if (n > 0) {
@@ -1839,8 +1898,9 @@
         const remainder = e.cents - share * n;
         
         e.split.forEach((sid, idx) => {
-          if (bal[sid] !== undefined) {
-            bal[sid] -= share + (idx < remainder ? 1 : 0);
+          const splitId = String(sid);
+          if (bal[splitId] !== undefined) {
+            bal[splitId] -= share + (idx < remainder ? 1 : 0);
           }
         });
       }
@@ -1858,19 +1918,22 @@
     const used = {};
     const units = [];
     activeGroup.couples.forEach(c => {
-      if (activeGroup.participants[c[0]] && activeGroup.participants[c[1]]) {
+      const id0 = String(c[0]);
+      const id1 = String(c[1]);
+      if (activeGroup.participants[id0] && activeGroup.participants[id1]) {
         units.push({
-          ids: c.slice(),
-          bal: (bal[c[0]] || 0) + (bal[c[1]] || 0)
+          ids: [id0, id1],
+          bal: (bal[id0] || 0) + (bal[id1] || 0)
         });
-        used[c[0]] = used[c[1]] = true;
+        used[id0] = used[id1] = true;
       }
     });
     parts.forEach(p => {
-      if (!used[p.id]) {
+      const pid = String(p.id);
+      if (!used[pid]) {
         units.push({
-          ids: [p.id],
-          bal: bal[p.id] || 0
+          ids: [pid],
+          bal: bal[pid] || 0
         });
       }
     });
@@ -1912,12 +1975,12 @@
 
     const getPayerTarget = (ids) => {
       for (let i = 0; i < ids.length; i++) {
-        const p = activeGroup.participants[ids[i]];
-        if (p && p.paysTo) return p.paysTo;
+        const p = activeGroup.participants[String(ids[i])];
+        if (p && p.paysTo) return String(p.paysTo);
       }
       return null;
     };
-    const crByMember = (pid) => creds.find(c => c.rem > 0 && c.ids.includes(pid));
+    const crByMember = (pid) => creds.find(c => c.rem > 0 && c.ids.map(String).includes(String(pid)));
 
     debs.forEach(d => {
       const target = getPayerTarget(d.ids);
@@ -1951,7 +2014,7 @@
       }
     });
 
-    const getUnitAlias = (ids) => ids.map(id => activeGroup.participants[id]?.alias?.trim() || '').filter(Boolean).join('  ·  ');
+    const getUnitAlias = (ids) => ids.map(id => activeGroup.participants[String(id)]?.alias?.trim() || '').filter(Boolean).join('  ·  ');
     
     if (!moves.length) {
       $('settlementList').innerHTML = '<div class="settled-note"><span class="big">¡Están todos a mano!</span>No se deben nada.</div>';
@@ -2091,6 +2154,36 @@
       toast('Error al cargar panel de grupos: ' + err.message);
     }
   }
+
+  // --- SPLIT GRID SELECTION HELPERS AND EVENT LISTENERS ---
+  function getSelectedSplit() {
+    return Array.from($('splitGrid').querySelectorAll('input:checked')).map(i => i.value);
+  }
+
+  function updateSplitCount() {
+    if (!activeGroup) return;
+    const n = getSelectedSplit().length;
+    const t = Object.keys(activeGroup.participants || {}).length;
+    $('splitCount').textContent = (n === t && t > 0) ? "Todos" : (n === 0 ? "Nadie seleccionado" : `${n} de ${t}`);
+    $('toggleAllBtn').textContent = (n === t) ? "Ninguno" : "Todos";
+  }
+
+  // Bind split list selection events
+  $('splitGrid').addEventListener('change', (e) => {
+    if (e.target.closest('input')) {
+      updateSplitCount();
+    }
+  });
+
+  $('toggleAllBtn').addEventListener('click', () => {
+    if (!activeGroup) return;
+    const t = Object.keys(activeGroup.participants || {}).length;
+    const all = getSelectedSplit().length === t;
+    $('splitGrid').querySelectorAll('input').forEach(i => {
+      i.checked = !all;
+    });
+    updateSplitCount();
+  });
 
   // Register Service Worker
   if ('serviceWorker' in navigator) {
